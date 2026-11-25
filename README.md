@@ -10,7 +10,6 @@ Website không cần máy chủ hay cơ sở dữ liệu. Mọi file POS đượ
 |---|---|
 | `index.html` | Toàn bộ ứng dụng: giao diện, engine tính toán, dữ liệu mẫu |
 | `vendor/exceljs.min.js` | Đọc file .xlsx và xuất Excel |
-| `vendor/html2canvas.min.js`, `vendor/jspdf.umd.min.js` | Xuất PDF |
 
 Giữ nguyên cấu trúc thư mục khi đưa lên hosting. `index.html` phải nằm cùng chỗ với thư mục `vendor/`.
 
@@ -49,7 +48,7 @@ Website có thẻ `noindex` để Google không đưa vào kết quả tìm ki�
 2. Mở website → bước **1 Dữ liệu** → thả file vào đúng ô từng kỳ. Kiểm tra các dấu ✓ đối chiếu.
 3. Lần đầu dùng: bấm **Tải file mẫu giá và giá vốn**, sửa giá niêm yết và điền giá vốn, rồi **Nhập file giá và giá vốn**. Nhập luôn % hoa hồng app, số ghế và kế hoạch.
 4. Bấm **Phân tích →**, đọc lần lượt Level 01, 02, 03, Menu và Scorecard.
-5. Sang bước **3 Báo cáo**: sửa kế hoạch hành động. Sau đó bấm **Copy tóm tắt** để gửi Zalo, hoặc **Xuất PDF**, **In**, **Xuất Excel**.
+5. Sang bước **3 Báo cáo**: sửa kế hoạch hành động. Sau đó bấm **Copy tóm tắt** để gửi Zalo, hoặc **In / Xuất PDF** (trong hộp thoại in chọn "Lưu dưới dạng PDF"), **Xuất Excel**.
 
 ## Claude viết nhận xét (tùy chọn)
 

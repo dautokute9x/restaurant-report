@@ -183,7 +183,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 @media(max-width:900px){.exec,.two,.grid2,.grid3,.tree,.br{grid-template-columns:minmax(0,1fr)}.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.tree .kids,.leafs{border-left:0;padding-left:0}.br:before,.leaf:before{display:none}.br>.kids{padding-left:0}}
 @media(max-width:600px){.stack thead{display:none}.stack tr{display:grid;padding-block:8px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:9em;text-align:start;white-space:normal}.stack td::before{content:attr(data-l);float:inline-start;width:8.5em;margin-inline-start:-9em;white-space:normal;color:var(--mut);font-weight:700;font-size:12px}.stack td:empty{display:none}body{font-size:15px}.steps{order:3;width:100%;justify-content:center}.run .st{gap:12px}.tabs{grid-template-columns:minmax(0,1fr)}table{font-size:12.5px}}
 @page{size:A4 landscape;margin:6mm}
-@media print{body{background:#fff}.top,.banner,.bg,.run,.toast,footer,#p1,#p2,.rtools,.sum,#p3 h1,#p3 .sub,.noprint{display:none!important}#p3{display:block!important;padding:0}.wrap{padding:0;max-width:none}.sheetwrap{overflow:visible;margin:0!important}.sheet{box-shadow:none;margin:0;border-radius:0;break-after:page;zoom:.93}}
+@media print{body{background:#fff}.top,.banner,.bg,.run,.toast,footer,#p1,#p2,.rtools,.sum,#p3 h1,#p3 .sub,.noprint{display:none!important}#p3{display:block!important;padding:0}.wrap{padding:0;max-width:none}.sheetwrap{overflow:visible;margin:0!important}.sheet{box-shadow:none;margin:0;border-radius:0;break-after:page;zoom:.93}.sheet:last-child{break-after:auto}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <div class="bg"><i></i><i></i></div>
@@ -262,7 +262,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 <section class="page" id="p3"><div class="wrap">
  <h1>Báo cáo cho cấp trên</h1>
  <p class="sub">Bản 1 trang kèm phụ lục. Các ô trong bảng kế hoạch hành động sửa trực tiếp được và được nhớ trên trình duyệt này.</p>
- <div class="rtools"><button class="btn" id="copySum">Copy tóm tắt</button><button class="btn ghost" id="pdf2">Xuất PDF</button><button class="btn ghost" id="printBtn">In</button><button class="btn ghost" id="xlsx2">Xuất Excel</button><button class="btn ghost" id="actAdd">+ Thêm hành động</button><button class="btn ghost" id="actReset">Gợi ý lại hành động</button></div>
+ <div class="rtools"><button class="btn" id="copySum">Copy tóm tắt</button><button class="btn ghost" id="pdf2">In / Xuất PDF</button><button class="btn ghost" id="xlsx2">Xuất Excel</button><button class="btn ghost" id="actAdd">+ Thêm hành động</button><button class="btn ghost" id="actReset">Gợi ý lại hành động</button></div>
  <textarea class="sum" id="sumTxt" aria-label="Tóm tắt" readonly></textarea>
  <div class="sheetwrap" style="margin-top:18px"><div id="sheets"></div></div>
 </div></section>
@@ -763,12 +763,13 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 </script>
 <script>{
 'use strict';
-new MutationObserver(() => { for (const c of document.querySelectorAll('.stack td:not([data-l])')) { let i = 0, p = c; while ((p = p.previousElementSibling)) i += p.colSpan; c.dataset.l = (c.closest('table').rows[0].cells[i] || {}).textContent || ''; } }).observe(document, { childList: true, subtree: true });
+// column labels for the stacked phone layout of table(); all such tables live in #panel
+function labelCells(root) { for (const c of root.querySelectorAll('.stack td')) { let i = 0, p = c; while ((p = p.previousElementSibling)) i += p.colSpan; c.dataset.l = (c.closest('table').rows[0].cells[i] || {}).textContent || ''; } }
 const $ = id => document.getElementById(id);
 const E = window.RE;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const LS = 'rpr.v1';
-const LIBS = { xlsx: 'vendor/exceljs.min.js', h2c: 'vendor/html2canvas.min.js', pdf: 'vendor/jspdf.umd.min.js' };
+const LIBS = { xlsx: 'vendor/exceljs.min.js' };
 const DEF = () => ({ chanMap: Object.assign({}, E.CHANNELS), comm0: {}, comm1: {}, dayparts: E.DAYPARTS.map(x => Object.assign({}, x)), nonFood: E.NONFOOD.slice(), seats: 0, area: 0, plan: { net: 0, tc: 0, food: 0 }, thr: 5, prices: {}, costs: {}, events: [], actions: null, l0: 'Kỳ so sánh', l1: 'Kỳ hiện tại', kind: 'Tháng trước' });
 function loadCfg() { try { const c = JSON.parse(localStorage.getItem(LS)); return c ? Object.assign(DEF(), c) : DEF(); } catch (e) { return DEF(); } }
 const S = { sample: false, per: [{ files: [] }, { files: [] }], cfg: DEF(), res: null, page: 1, tab: 1, dim: 'ch', mv: 'cat', dirty: true, expand: {}, sel: null, dl: null, sm: null };
@@ -1169,7 +1170,7 @@ function renderPanel() {
     h += '<div class="note"><span>Xanh: tốt hơn hoặc đạt kế hoạch. Vàng: xấu đi dưới ngưỡng. Đỏ: xấu đi từ ngưỡng trở lên hoặc đạt dưới 95% kế hoạch.</span></div>';
   }
   if (lv <= 3) h += '<div class="note"><span>Trục không bắt đầu từ 0 (có dấu ngắt), cột tổng chỉ để so sánh mức chênh lệch.</span><span>Số nhỏ dưới mỗi cột: % so với kỳ so sánh.</span></div>';
-  $('panel').innerHTML = h;
+  $('panel').innerHTML = h; labelCells($('panel'));
   draws.forEach(([id, fn]) => { const el = $(id); if (el) mount(el, fn); });
 }
 function menuPanel(L, draws) {
@@ -1295,17 +1296,17 @@ $('ai').onclick = async function () {
   if (!S.sm || !S.res) return; const btn = this; btn.disabled = true; btn.textContent = 'Claude đang viết…';
   const prompt = 'Bạn là quản lý nhà hàng, viết nhận xét gửi Giám đốc vận hành. Từ dữ liệu JSON dưới đây, viết 3 ý chính bằng tiếng Việt. Mỗi ý gồm "h" (tiêu đề dưới 7 từ) và "t" (1–2 câu, dưới 40 từ). Dùng ĐÚNG các con số trong JSON, viết tiền dạng 12,3 tr hoặc 1,25 tỷ, bọc số tiền tác động trong **…** kèm dấu + hoặc −. Liên hệ nhật ký sự kiện nếu có liên quan. Không bịa số. Chỉ trả về mảng JSON [{"h":"…","t":"…"}].\n\nDỮ LIỆU:\n' + aiCtx();
   try {
-    const r = await S.sm(prompt, { modelTier: 'default' }), m = r && r.text && r.text.match(/\[[\s\S]*\]/), arr = m && JSON.parse(m[0]);
+    const r = await S.sm(prompt), m = r && r.text && r.text.match(/\[[\s\S]*\]/), arr = m && JSON.parse(m[0]);
     if (arr && arr.length && arr[0].h) { const b = arr.slice(0, 4).map(x => ({ h: String(x.h), t: String(x.t) })); S.res.I.bullets = b; renderBullets(b); $('aiInfo').textContent = 'Claude đã viết lại. Vui lòng đối chiếu số liệu trước khi gửi.'; }
     else $('aiInfo').textContent = 'Claude chưa trả về đúng định dạng, thử lại sau.';
-  } catch (e) { if (e && e.code === 'not_granted') { $('ai').hidden = true; $('askbox').hidden = true; } else $('aiInfo').textContent = e && e.code === 'rate_limited' ? 'Claude đang bận, thử lại sau ít phút.' : e && e.code === 'bad_key' ? 'Khóa API không hợp lệ, kiểm tra lại ở bước 1.' : 'Chưa kết nối được Claude' + (e && e.message ? ': ' + e.message : '.'); }
+  } catch (e) { $('aiInfo').textContent = e && e.code === 'rate_limited' ? 'Claude đang bận, thử lại sau ít phút.' : e && e.code === 'bad_key' ? 'Khóa API không hợp lệ, kiểm tra lại ở bước 1.' : 'Chưa kết nối được Claude' + (e && e.message ? ': ' + e.message : '.'); }
   btn.disabled = false; btn.textContent = 'Viết lại nhận xét bằng Claude';
 };
 $('ask').onclick = async function () {
   const q = $('q').value.trim(); if (!q || !S.sm || !S.res) return; const btn = this; btn.disabled = true;
   const box = document.createElement('div'); box.className = 'ans'; box.textContent = 'Claude đang trả lời…'; $('ans').replaceChildren(box);
   const prompt = 'Bạn là chuyên gia vận hành nhà hàng. Trả lời bằng tiếng Việt, tối đa 120 từ, chỉ dựa trên dữ liệu JSON sau và dùng đúng các con số có trong đó. Nếu dữ liệu không đủ thì nói rõ cần thêm dữ liệu gì.\n\nDỮ LIỆU:\n' + aiCtx() + '\n\nCÂU HỎI: ' + q;
-  try { const r = await S.sm(prompt, { modelTier: 'default', cache: false, onText: o => { box.textContent = o.text; } }); if (r && r.text) box.textContent = r.text; }
+  try { const r = await S.sm(prompt); if (r && r.text) box.textContent = r.text; }
   catch (e) { box.textContent = e && e.code === 'rate_limited' ? 'Claude đang bận, thử lại sau ít phút.' : e && e.code === 'bad_key' ? 'Khóa API không hợp lệ.' : 'Chưa kết nối được Claude' + (e && e.message ? ': ' + e.message : '.'); }
   btn.disabled = false;
 };
@@ -1375,24 +1376,6 @@ async function exportXlsx(btn) {
     const buf = await wb.xlsx.writeBuffer();
     await save(fname('xlsx'), new Blob([buf]));
   } catch (e) { console.error(e); toast('Chưa tạo được file Excel, kiểm tra kết nối mạng'); }
-  btn.disabled = false;
-}
-async function exportPdf(btn) {
-  if (!S.res) return; btn.disabled = true;
-  try {
-    if (S.page !== 3) showPage(3);
-    if (!window.html2canvas) await loadScript(LIBS.h2c);
-    if (!window.jspdf) await loadScript(LIBS.pdf);
-    await document.fonts.ready;
-    const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const sheets = document.querySelectorAll('#sheets .sheet');
-    for (let i = 0; i < sheets.length; i++) {
-      const c = await window.html2canvas(sheets[i], { scale: 2, backgroundColor: '#ffffff', ignoreElements: el => el.classList && el.classList.contains('noprint') });
-      if (i) doc.addPage();
-      const r = c.height / c.width, w = Math.min(297, 210 / r), hgt = w * r; doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', (297 - w) / 2, (210 - hgt) / 2, w, hgt);
-    }
-    await save(fname('pdf'), doc.output('blob'));
-  } catch (e) { console.error(e); toast('Chưa tạo được PDF, kiểm tra kết nối mạng'); }
   btn.disabled = false;
 }
 async function priceTemplate(btn) {
@@ -1471,7 +1454,7 @@ P1.addEventListener('change', e => {
   S.dirty = true;
   persist(); renderInputs();
 });
-$('evAdd').onclick = () => { S.cfg.events.push([new Date().toISOString().slice(0, 10), '']); persist(); renderInputs(); };
+$('evAdd').onclick = () => { S.cfg.events.push([new Date().toLocaleDateString('sv') /* local YYYY-MM-DD */, '']); persist(); renderInputs(); };
 $('tplBtn').onclick = function () { priceTemplate(this); };
 $('priceUp').onclick = () => $('priceFile').click();
 $('priceFile').onchange = function () { const f = this.files[0]; this.value = ''; if (f) importPrices(f); };
@@ -1490,11 +1473,14 @@ $('actAdd').onclick = () => { (S.cfg.actions = S.cfg.actions || []).push(['', ''
 $('actReset').onclick = () => { S.cfg.actions = defaultActions(); persist(); renderReport(); };
 $('copySum').onclick = async () => { const t = $('sumTxt').value; try { await navigator.clipboard.writeText(t); toast('Đã copy tóm tắt'); } catch (e) { $('sumTxt').select(); toast('Nhấn Ctrl/Cmd + C để copy'); } };
 ['xlsx', 'xlsx2'].forEach(id => $(id).onclick = function () { if (S.dirty) compute(); exportXlsx(this); });
-['pdf', 'pdf2'].forEach(id => $(id).onclick = function () { if (S.dirty) compute(); exportPdf(this); });
+// PDF = the browser's print dialog ("Save as PDF"): uses the A4 print CSS and keeps text selectable
+// sheet 1 grows with the action list: shrink each sheet to one A4 landscape page (≈748px tall inside the 6mm margins)
+addEventListener('beforeprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = Math.min(0.93, 740 / s.offsetHeight)));
+addEventListener('afterprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = ''));
+['pdf', 'pdf2'].forEach(id => $(id).onclick = () => { if (S.page !== 3) showPage(3); if (S.page === 3) { toast('Chọn "Lưu dưới dạng PDF" trong hộp thoại in'); setTimeout(() => window.print(), 300); } });
 
 /* ---------------- start ---------------- */
 $('sampleBtn').onclick = () => { loadSample(); showPage(2); };
-$('printBtn').onclick = () => { if (S.page !== 3) showPage(3); setTimeout(() => window.print(), 300); };
 (async () => {
   let saved = null;
   try { saved = await IDB.get('per'); } catch (e) { }

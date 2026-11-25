@@ -1,6 +1,7 @@
 // Run: node test.js  (checks the engine inside index.html; prints "ok" when everything passes)
 const fs = require('fs'), assert = require('assert');
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+html.split('<script>').slice(1).forEach(s => new Function(s.split('</script>')[0]));   // every inline script parses
 const m = { exports: {} };
 new Function('module', html.split('<script>')[1].split('</script>')[0])(m);   // first <script> is the engine
 const E = m.exports;
