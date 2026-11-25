@@ -1043,10 +1043,10 @@ function scatter(items, popT, avgM) {
     const x = v => pL + v / mxX * (W - pL - pR), y = v => pT + (1 - v / mxY) * (H - pT - pB);
     const C = { Star: 'var(--pos)', Plowhorse: '#c98a2b', Puzzle: '#5b7fb8', Dog: 'var(--neg)' };
     let s = '<line x1="' + x(popT) + '" x2="' + x(popT) + '" y1="' + pT + '" y2="' + (H - pB) + '" stroke="var(--mut)" stroke-dasharray="4 4"/><line x1="' + pL + '" x2="' + (W - pR) + '" y1="' + y(avgM) + '" y2="' + y(avgM) + '" stroke="var(--mut)" stroke-dasharray="4 4"/>';
-    s += '<text x="' + (W - pR) + '" y="' + (pT + 12) + '" text-anchor="end" font-size="12" font-weight="700" fill="var(--pos)">Ngôi sao</text><text x="' + (pL + 6) + '" y="' + (pT + 12) + '" font-size="12" font-weight="700" fill="#5b7fb8">Dấu hỏi</text><text x="' + (W - pR) + '" y="' + (H - pB - 6) + '" text-anchor="end" font-size="12" font-weight="700" fill="#c98a2b">Ngựa kéo</text><text x="' + (pL + 6) + '" y="' + (H - pB - 6) + '" font-size="12" font-weight="700" fill="var(--neg)">Món yếu</text>';
+    s += '<text x="' + (W - pR) + '" y="' + (pT + 12) + '" text-anchor="end" font-size="12" font-weight="700" fill="var(--pos)">Star</text><text x="' + (pL + 6) + '" y="' + (pT + 12) + '" font-size="12" font-weight="700" fill="#5b7fb8">Puzzle</text><text x="' + (W - pR) + '" y="' + (H - pB - 6) + '" text-anchor="end" font-size="12" font-weight="700" fill="#c98a2b">Plowhorse</text><text x="' + (pL + 6) + '" y="' + (H - pB - 6) + '" font-size="12" font-weight="700" fill="var(--neg)">Dog</text>';
     s += '<text x="' + ((W + pL) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="var(--mut)">Tỷ trọng số lượng bán →</text><text x="12" y="' + ((H - pB) / 2) + '" font-size="11" fill="var(--mut)" transform="rotate(-90 12 ' + ((H - pB) / 2) + ')" text-anchor="middle">Lãi gộp / món →</text>';
     const top = items.slice().sort((a, b) => b.n - a.n).slice(0, W < 520 ? 4 : 8).map(i => i.name);
-    items.forEach(i => { const r = 3 + 11 * Math.sqrt(i.n / mxN); s += '<circle cx="' + x(i.share).toFixed(1) + '" cy="' + y(i.m).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + C[i.quad] + '" fill-opacity=".55" stroke="' + C[i.quad] + '"><title>' + esc(i.name + ' · ' + QN[i.quad] + ' · ' + E.n0(i.q) + ' món · ' + M(i.n)) + '</title></circle>'; });
+    items.forEach(i => { const r = 3 + 11 * Math.sqrt(i.n / mxN); s += '<circle cx="' + x(i.share).toFixed(1) + '" cy="' + y(i.m).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + C[i.quad] + '" fill-opacity=".55" stroke="' + C[i.quad] + '"><title>' + esc(i.name + ' · ' + i.quad + ' · ' + E.n0(i.q) + ' món · ' + M(i.n)) + '</title></circle>'; });
     const placed = [];
     items.filter(i => top.indexOf(i.name) >= 0).sort((a, b) => b.n - a.n).forEach(i => {
       const t = i.name.length > 22 ? i.name.slice(0, 21) + '…' : i.name, tw = t.length * 6.2, cx = x(i.share), right = cx + 8 + tw > W - pR, lx = right ? cx - 8 - tw : cx + 8, ly = y(i.m) - 8;
@@ -1255,14 +1255,13 @@ function weekdaySection(A0, A1, L, draws, id) {   // A0 null = one period only
     return tr([d, a.d + ' → ' + b.d, E.n1(perDay(a, 'tc')), E.n1(perDay(b, 'tc')), esc(M(perDay(a, 'net'))), esc(M(perDay(b, 'net'))), a.d && b.d ? '<span class="' + cls(ch) + '">' + esc(SP(ch)) + '</span>' : '']); });
   return '<div class="tools"><b>Doanh thu trung bình theo thứ</b>' + (w0 ? legend2(L) : '') + '</div><div class="fig sm" id="' + id + '"></div>' + table(head, rows);
 }
-const QN = { Star: 'Ngôi sao', Plowhorse: 'Ngựa kéo', Puzzle: 'Dấu hỏi', Dog: 'Món yếu' };   // menu matrix groups (engine keys -> labels)
 function engBlock(e, label, draws) {   // menu engineering matrix of one period
   const q = { Star: [], Plowhorse: [], Puzzle: [], Dog: [] };
   e.items.forEach(i => q[i.quad].push(i)); Object.keys(q).forEach(k => q[k].sort((a, b) => b.n - a.n));
   draws.push(['sc', scatter(e.items, e.popT, e.avgM)]);
   const tip = { Star: 'Giữ nguyên chất lượng, đặt vị trí nổi bật trên menu.', Plowhorse: 'Bán chạy nhưng lãi thấp: tăng giá nhẹ hoặc xem lại định lượng.', Puzzle: 'Lãi cao nhưng ít bán: đẩy giới thiệu, đổi vị trí, đưa vào combo.', Dog: 'Ít bán, lãi thấp: cân nhắc loại khỏi menu.' };
   return '<div class="two"><div><div class="fig" id="sc" style="min-height:380px"></div><p class="hint">' + (e.byMargin ? 'Trục dọc: lãi gộp mỗi món (giá thực thu trừ giá vốn).' : 'Chưa có giá vốn: trục dọc tạm dùng giá thực thu mỗi món.') + ' Ngưỡng phổ biến = 70% × 1/' + e.items.length + ' món. Kỳ ' + esc(label) + '.</p></div><div class="quad">' +
-    Object.keys(q).map(k => '<div><b>' + QN[k] + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
+    Object.keys(q).map(k => '<div><b>' + k + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
 }
 function menuPanel(L, draws) {
   const { R, A0, A1 } = S.res, Mn = R.menu, mv = S.mv;
