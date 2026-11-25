@@ -63,7 +63,8 @@ Không có khóa thì các nút này được ẩn, mọi tính năng khác vẫ
 ## Ghi chú về số liệu
 
 - Mọi số tiền là **doanh thu thuần chưa VAT**. Trong báo cáo POS, Gross Sales là doanh thu đã gồm VAT, không phải doanh thu trước giảm giá.
-- Khi chưa có bảng giá niêm yết, **tiền giảm giá chỉ là số ước tính**: lấy giá cao nhất của mỗi món trong kỳ làm giá niêm yết.
+- Khi chưa có bảng giá niêm yết, **tiền giảm giá chỉ là số ước tính**: lấy giá bán phổ biến nhất của mỗi món trên từng kênh làm giá niêm yết, vì app (ShopeeFood, Grab...) có bảng giá riêng cao hơn tại quầy. File giá chỉ cần giá menu tại quầy.
 - Các dòng bao bì và phí giao (TA Packaging, Packaging, Delivery Fee) không tính là món. Danh sách này sửa được ở bước 1.
 - Kênh bán được tách theo cột Order Category của Dish Sales, nên Xanh Ngon tách riêng khỏi "Take Away - Customer".
+- Level 03 tách riêng hiệu ứng **ngày cuối tuần**: T7–CN bán gấp 2–3 lần ngày thường, nên kỳ có thêm một ngày cuối tuần không được tính là năng suất tăng.
 - Ở mỗi level, các hiệu ứng cộng lại đúng bằng chênh lệch tổng. Website tự kiểm tra và báo ở mục "Lưu ý về dữ liệu".

@@ -48,4 +48,21 @@ const A0 = E.aggregate(X.p0, cfg(0)), A1 = E.aggregate(X.p1, cfg(1));
 for (const profit of [false, true]) assert.ok(E.analyze(A0, A1, { profit }).ok, 'bridge sums, profit=' + profit);
 assert.ok(A1.recon.every(r => r.ok), 'sample reports reconcile');
 
+// list price per channel: app markup is not an in-store discount; app deals are measured against the app price
+const L = (oc, gr, chk) => ({ d: '2026-11-02', cat: 'Baked', chk: chk, dish: 'Dish A', oc: oc, ot: oc, g: 1, q: 1, n: gr / 1.08, gr: gr });
+const gb = [L('Dine In', 100000, '1'), L('Dine In', 100000, '2'), L('Dine In', 50000, '3'), L('Now', 150000, '4'), L('Now', 150000, '5'), L('Now', 75000, '6')];
+const lp = E.listPrices(gb, E.NONFOOD);
+assert.deepStrictEqual([lp.ch['Dish A|Dine In'], lp.ch['Dish A|Now'], lp.dish['Dish A']], [100000, 150000, 150000]);
+let G = E.aggregate({ dish: gb }, {});
+assert.ok(Math.abs(G.ch['Tại chỗ'].disc - 50000 / 1.08) < 1, 'in-store discount only on the below-menu sale');
+assert.ok(Math.abs(G.ch['ShopeeFood'].disc - 75000 / 1.08) < 1, 'app discount against the app price');
+G = E.aggregate({ dish: gb }, { prices: { 'Dish A': { list: 100000, vat: 8 } } });   // menu file holds the in-store price only
+assert.ok(Math.abs(G.ch['ShopeeFood'].disc - 75000 / 1.08) < 1, 'menu file does not turn the app markup into a discount');
+
+// level 3: an extra weekend day is weekend mix, not productivity (2026-11-02 Mon, 2026-11-07 Sat, 2026-11-08 Sun)
+const bills = (d, n) => Array.from({ length: n }, (_, i) => ({ d: d, cat: 'Pasta', chk: d + i, dish: 'X', oc: 'Dine In', ot: 'Dine In', g: 1, q: 1, n: 100, gr: 108 }));
+const R3 = E.analyze(E.aggregate({ dish: bills('2026-11-02', 10).concat(bills('2026-11-07', 30)) }, {}), E.aggregate({ dish: bills('2026-11-07', 30).concat(bills('2026-11-08', 30)) }, {}), {});
+assert.ok(R3.ok, 'level 3 still sums to traffic');
+assert.ok(Math.abs(R3.L3.prod) < 1e-6 && Math.abs(R3.L3.daymix - 2000) < 1e-6, 'weekend swap shows as weekend mix (+20 bills x 100), productivity 0');
+
 console.log('ok');

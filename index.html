@@ -311,8 +311,8 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 
   /* ---------------- report detection & parsing ---------------- */
   var NONFOOD = ['TA Packaging', 'Packaging', 'Delivery Fee'];
-  var CHANNELS = { 'Dine In': 'Tại chỗ', 'Take Away': 'Mang đi', 'Now': 'ShopeeFood', 'Grab': 'GrabFood', 'XanhNgonSM': 'Xanh Ngon', 'Online': 'Giao hàng riêng', 'Call Center': 'Giao hàng riêng' };
-  var DAYPARTS = [{ name: 'Sáng', from: 6, to: 9 }, { name: 'Trưa', from: 10, to: 13 }, { name: 'Chiều', from: 14, to: 16 }, { name: 'Tối', from: 17, to: 23 }];
+  var CHANNELS = { 'Dine In': 'Tại chỗ', 'Take Away': 'Mang đi', 'Now': 'ShopeeFood', 'Grab': 'GrabFood', 'XanhNgonSM': 'Xanh Ngon', 'Online': 'Giao hàng riêng', 'Call Center': 'Giao hàng riêng', 'BeFood': 'BeFood', 'ZaloOSC': 'Giao hàng riêng' };
+  var DAYPARTS = [{ name: 'Sáng', from: 6, to: 9 }, { name: 'Trưa', from: 10, to: 14 }, { name: 'Chiều', from: 15, to: 16 }, { name: 'Tối', from: 17, to: 23 }];
   var REPORTS = {
     dish: { name: 'Dish Sales', need: ['Check Number', 'Dish', 'Order Category', 'Quantity', 'Net Sales'] },
     otype: { name: 'Order Type', need: ['Order Type', 'TC', 'Net Sales'], not: ['Dish', 'Hour'] },
@@ -372,6 +372,22 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     return { type: type, records: out, skipped: skipped, bad: bad, from: from, to: to, restaurants: keys(rest) };
   }
 
+  /* list price estimate (gross incl. VAT per unit) = the most-sold unit price, per dish and per Order Category.
+     Delivery apps often carry their own, higher menu prices, so one price per dish
+     overstates in-store discounts; the per-dish value covers channels with no priced sale (free combo items). */
+  function listPrices(dish, nonFood) {
+    var h = { ch: {}, dish: {} }, out = { ch: {}, dish: {} };
+    dish.forEach(function (r) {
+      if (!(r.q > 0 && r.gr > 0) || nonFood.indexOf(r.cat) >= 0) return;
+      var u = Math.round(r.gr / r.q / 100) * 100;
+      [['ch', r.dish + '|' + (r.oc || r.ot || '(trống)')], ['dish', r.dish]].forEach(function (x) { var o = h[x[0]][x[1]] || (h[x[0]][x[1]] = {}); o[u] = (o[u] || 0) + r.q; });
+    });
+    ['ch', 'dish'].forEach(function (k) {
+      keys(h[k]).forEach(function (x) { var o = h[k][x], best = 0, n = 0; keys(o).forEach(function (u) { if (o[u] > n || (o[u] === n && +u > best)) { best = +u; n = o[u]; } }); out[k][x] = best; });
+    });
+    return out;
+  }
+
   /* ---------------- aggregate one period ---------------- */
   /* ds = {dish:[], otype:[], time:[], promo:[]}
      cfg = {chanMap, nonFood:[], dayparts:[], prices:{dish:{list,vat}}, costs:{dish:unitCostNet}, comm:{channel:pct}, seats} */
@@ -385,12 +401,8 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
       dates: [], days: 0, unknownOC: {}, missingCost: {}, missingPrice: {}, discEst: !hasPrices, recon: [], hasDish: false };
     var dish = ds.dish || [];
     A.hasDish = dish.length > 0;
-    var checks = {}, dset = {}, est = {};
+    var checks = {}, dset = {}, est = listPrices(dish, nonFood);
     function isFood(c) { return nonFood.indexOf(c) < 0; }
-    // estimated list price (gross incl. VAT per unit) = highest unit price seen in the period
-    dish.forEach(function (r) {
-      if (r.q > 0 && r.gr > 0) { var u = r.gr / r.q; if (!est[r.dish] || u > est[r.dish]) est[r.dish] = u; }
-    });
     dish.forEach(function (r) {
       dset[r.d] = 1;
       var oc = r.oc || r.ot || '(trống)', chn = chanMap[oc];
@@ -402,10 +414,10 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
       // list value (net of VAT) before discounts
       var vat = r.n > 0 && r.gr > 0 ? Math.round((r.gr / r.n - 1) * 100) / 100 : 0.08, list = r.n;
       if (food && r.q > 0) {
-        var p = prices[r.dish];
-        if (p && p.list > 0) list = p.list / (1 + (p.vat != null ? p.vat / 100 : vat)) * r.q;
-        else if (hasPrices) { A.missingPrice[r.dish] = 1; if (est[r.dish]) list = est[r.dish] / (1 + vat) * r.q; }
-        else if (est[r.dish]) list = est[r.dish] / (1 + vat) * r.q;
+        var p = prices[r.dish], e = est.ch[r.dish + '|' + oc] || est.dish[r.dish], eu = e ? e / (1 + vat) : 0;
+        // a channel whose usual price is above the menu price (app markup) is measured against its own price
+        if (p && p.list > 0) list = Math.max(p.list / (1 + (p.vat != null ? p.vat / 100 : vat)), eu) * r.q;
+        else { if (hasPrices) A.missingPrice[r.dish] = 1; if (eu) list = eu * r.q; }
         if (list < r.n) list = r.n;   // never a negative discount from estimation noise
       }
       var uc = costs[r.dish], fc = 0;
@@ -470,7 +482,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
   /* ---------------- KPIs ---------------- */
   function kpis(A, profit) {
     var app = 0, appTc = 0;
-    keys(A.ch).forEach(function (k) { if (/shopee|grab|xanh|be$|baemin|gojek|app/i.test(k)) { app += A.ch[k].net; appTc += A.ch[k].tc; } });
+    keys(A.ch).forEach(function (k) { if (/shopee|grab|xanh|be$|befood|baemin|gojek|app/i.test(k)) { app += A.ch[k].net; appTc += A.ch[k].tc; } });
     return {
       net: A.net, tc: A.tc, ta: div(A.net, A.tc), upt: div(A.items, A.tc), ip: div(A.net, A.items), ipList: div(A.listNet, A.items), guests: A.guests || 0,
       tcDay: div(A.tc, A.days), netDay: div(A.net, A.days), days: A.days,
@@ -531,16 +543,24 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
       var o = {}; keys(A.dp).forEach(function (k) { var s = A.dp[k], sh = div(s.net, A.net); o[k] = { tc: s.tc, net: s.net, food: A.food * sh, comm: A.comm * sh }; }); return o;
     }
     var L2dp = A0.hasTime && A1.hasTime ? bridge(dpSeg(A0), dpSeg(A1), profit) : null;
-    // level 3: traffic -> trading days + productivity
-    var W = div(L1.m0, A0.tc), g = div(A1.days, A0.days), r = div(A1.tc, A0.tc);
-    var L3 = { days: (g - 1) * A0.tc * W, prod: (r - g) * A0.tc * W, g: g, r: r, W: W };
-    L3.check_ = L3.days + L3.prod - L1.traffic;
+    // level 3: traffic -> trading days + weekend mix + like-for-like bills per day
+    // (a Sat/Sun sells 2-3x a weekday, so one extra weekend day is not productivity)
+    var W = div(L1.m0, A0.tc), g = div(A1.days, A0.days), wk0 = weekMix(A0), wk1 = weekMix(A1), exp1 = A0.tc * g;
+    if (wk0.we.d && wk0.wd.d && wk0.we.d + wk0.wd.d === A0.days && wk1.we.d + wk1.wd.d === A1.days) exp1 = wk1.we.d * wk0.we.tc / wk0.we.d + wk1.wd.d * wk0.wd.tc / wk0.wd.d;   // bills expected at period-0 rates per day type
+    var L3 = { days: (g - 1) * A0.tc * W, daymix: (exp1 - A0.tc * g) * W, prod: (A1.tc - exp1) * W, g: g, r: div(A1.tc, A0.tc), W: W, wk0: wk0, wk1: wk1 };
+    L3.check_ = L3.days + L3.daymix + L3.prod - L1.traffic;
     // menu (dish grain, pool = category), revenue or food margin
     var M = menuBridge(A0, A1, profit);
     var checks = { l1: L1.check_, l2: L2.T.check_, l2split: L2.T.split_, l3: L3.check_, l2traffic: L2.T.traffic - L1.traffic };
     var scale = Math.max(1, Math.abs(L1.m0), Math.abs(L1.m1));
     var ok = keys(checks).every(function (k) { return Math.abs(checks[k]) <= 1e-7 * scale; });
     return { profit: profit, L1: L1, L2: L2, L2dp: L2dp, L3: L3, menu: M, checks: checks, ok: ok, k0: kpis(A0, profit), k1: kpis(A1, profit) };
+  }
+
+  function weekMix(A) {   // open days and bills split weekday (Mon-Fri) / weekend (Sat-Sun), from Dish Sales days
+    var o = { wd: { d: 0, tc: 0, net: 0 }, we: { d: 0, tc: 0, net: 0 } };
+    keys(A.daily).forEach(function (d) { var w = new Date(d + 'T00:00:00Z').getUTCDay(), x = o[w === 0 || w === 6 ? 'we' : 'wd']; x.d++; x.tc += A.daily[d].tc; x.net += A.daily[d].net; });
+    return o;
   }
 
   function menuBridge(A0, A1, profit) {
@@ -596,12 +616,12 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 
   /* ---------------- insights ---------------- */
   var EN = {
-    traffic: ['more bills', 'fewer bills'], mix: ['a richer channel mix', 'a shift toward lower-value channels'], upt: ['more items per bill', 'fewer items per bill'],
+    traffic: ['more bills', 'fewer bills'], daymix: ['more weekend days', 'fewer weekend days'], mix: ['a richer channel mix', 'a shift toward lower-value channels'], upt: ['more items per bill', 'fewer items per bill'],
     price: ['higher prices per item', 'lower prices per item'], disc: ['lighter discounting', 'deeper discounts'], food: ['lower food cost', 'higher food cost'], comm: ['lower app commissions', 'higher app commissions']
   };
-  var VN = { traffic: 'Số bill', mix: 'Cơ cấu kênh', upt: 'Số món/bill', price: 'Giá TB/món', disc: 'Giảm giá', food: 'Giá vốn NVL', comm: 'Hoa hồng app', days: 'Số ngày mở cửa', prod: 'Bill/ngày' };
+  var VN = { traffic: 'Số bill', mix: 'Cơ cấu kênh', upt: 'Số món/bill', price: 'Giá TB/món', disc: 'Giảm giá', food: 'Giá vốn NVL', comm: 'Hoa hồng app', days: 'Số ngày mở cửa', daymix: 'Ngày cuối tuần', prod: 'Bill/ngày' };
   function drivers(R) {
-    var T = R.L2.T, d = [['traffic', T.traffic], ['mix', T.mix], ['upt', T.upt], ['price', T.price], ['disc', T.disc]];
+    var T = R.L2.T, dm = R.L3.daymix, d = [['traffic', T.traffic - dm], ['daymix', dm], ['mix', T.mix], ['upt', T.upt], ['price', T.price], ['disc', T.disc]];
     if (R.profit) d.push(['food', T.food], ['comm', T.comm]);
     return d.filter(function (x) { return Math.abs(x[1]) > 1; }).sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); });
   }
@@ -613,7 +633,8 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     if (lead) title += (up ? ' on ' : ' as ') + EN[lead[0]][lead[1] > 0 ? 0 : 1];
     if (off && Math.abs(off[1]) > 0.15 * Math.abs(T1.delta)) title += ', ' + (up ? 'partly offset by ' : 'despite ') + EN[off[0]][off[1] > 0 ? 0 : 1];
     var why = {
-      traffic: function (v) { return 'Số bill ' + (A1.tc >= A0.tc ? 'tăng ' : 'giảm ') + n0(Math.abs(A1.tc - A0.tc)) + ' (' + sPct(div(A1.tc - A0.tc, A0.tc)) + '), bill/ngày ' + n1(k0.tcDay) + ' → ' + n1(k1.tcDay) + ', tác động **' + sMoney(v) + '**.'; },
+      traffic: function (v) { return 'Số bill ' + (A1.tc >= A0.tc ? 'tăng ' : 'giảm ') + n0(Math.abs(A1.tc - A0.tc)) + ' (' + sPct(div(A1.tc - A0.tc, A0.tc)) + '), bill/ngày ' + n1(k0.tcDay) + ' → ' + n1(k1.tcDay) + ', tác động **' + sMoney(v) + '**' + (Math.abs(v - T1.traffic) > 1 ? ' (không tính phần do số ngày cuối tuần)' : '') + '.'; },
+      daymix: function (v) { return 'Số ngày T7–CN ' + R.L3.wk0.we.d + ' → ' + R.L3.wk1.we.d + '; cuối tuần bán ' + n1(div(div(R.L3.wk0.we.tc, R.L3.wk0.we.d), div(R.L3.wk0.wd.tc, R.L3.wk0.wd.d))) + ' lần số bill ngày thường, tác động **' + sMoney(v) + '**.'; },
       mix: function (v) { return 'Tỷ trọng bill qua app ' + pct(k0.appTcShare) + ' → ' + pct(k1.appTcShare) + '; bill app có giá trị thấp hơn tại chỗ nên cơ cấu tác động **' + sMoney(v) + '**.'; },
       upt: function (v) { return 'Số món/bill ' + nf2.format(k0.upt) + ' → ' + nf2.format(k1.upt) + ', tác động **' + sMoney(v) + '**.'; },
       price: function (v) { return 'Giá TB/món trước giảm giá ' + money(k0.ipList) + ' → ' + money(k1.ipList) + ' (' + sPct(div(k1.ipList - k0.ipList, k0.ipList)) + '), tác động **' + sMoney(v) + '**.'; },
@@ -641,10 +662,12 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
         { h: 'Giá trị bill cùng kênh', t: 'Khi giữ nguyên cơ cấu, TA từng kênh thay đổi tác động **' + sMoney(T2.check) + '** (số món ' + sMoney(T2.upt) + ', giá ' + sMoney(T2.price) + ', giảm giá ' + sMoney(T2.disc) + ').' }
       ] };
     var L3 = R.L3;
-    lv[3] = { title: Math.abs(L3.days) > Math.abs(L3.prod) ? 'Trading days drove traffic' : 'Bills per day ' + (L3.prod >= 0 ? 'improved' : 'declined') + ' on a like-for-like basis',
+    var w0 = L3.wk0, w1 = L3.wk1, bpd = function (x) { return n1(div(x.tc, x.d)); }, big = [['days', L3.days], ['daymix', L3.daymix], ['prod', L3.prod]].sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); })[0][0];
+    lv[3] = { title: big === 'days' ? 'Trading days drove traffic' : big === 'daymix' ? 'The weekend calendar drove traffic' : 'Bills per day ' + (L3.prod >= 0 ? 'improved' : 'declined') + ' on a like-for-like basis',
       bullets: [
         { h: 'Số ngày mở cửa', t: A0.days + ' → ' + A1.days + ' ngày, tác động **' + sMoney(L3.days) + '**.' },
-        { h: 'Năng suất', t: 'Bill/ngày ' + n1(k0.tcDay) + ' → ' + n1(k1.tcDay) + ' (' + sPct(div(k1.tcDay - k0.tcDay, k0.tcDay)) + '), tác động **' + sMoney(L3.prod) + '**.' }
+        { h: 'Ngày cuối tuần', t: 'Số ngày T7–CN ' + w0.we.d + ' → ' + w1.we.d + ' trên tổng ' + A0.days + ' → ' + A1.days + ' ngày; ' + L.p0 + ' cuối tuần ' + bpd(w0.we) + ' bill/ngày, ngày thường ' + bpd(w0.wd) + ', tác động **' + sMoney(L3.daymix) + '**.' },
+        { h: 'Năng suất cùng loại ngày', t: 'Bill/ngày thường ' + bpd(w0.wd) + ' → ' + bpd(w1.wd) + ', bill/ngày cuối tuần ' + bpd(w0.we) + ' → ' + bpd(w1.we) + ', tác động **' + sMoney(L3.prod) + '**.' }
       ].concat(k1.turnover != null ? [{ h: 'Công suất ghế', t: 'Vòng quay ghế ' + (k0.turnover != null ? nf2.format(k0.turnover) + ' → ' : '') + nf2.format(k1.turnover) + ' lượt/ghế/ngày; ' + (k1.guestsPerBill ? nf2.format(k1.guestsPerBill) + ' khách/bill tại chỗ.' : '') }] : []) };
     // actions
     var acts = [];
@@ -668,7 +691,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 
   var api = { num: num, txt: txt, day: day, detect: detect, parseSheet: parseSheet, aggregate: aggregate, analyze: analyze, bridge: bridge, kpis: kpis, insights: insights, drivers: drivers,
     money: money, sMoney: sMoney, full: full, pct: pct, sPct: sPct, pp: pp, n1: n1, n0: n0, nf2: nf2, div: div,
-    NONFOOD: NONFOOD, CHANNELS: CHANNELS, DAYPARTS: DAYPARTS, REPORTS: REPORTS, VN: VN };
+    listPrices: listPrices, NONFOOD: NONFOOD, CHANNELS: CHANNELS, DAYPARTS: DAYPARTS, REPORTS: REPORTS, VN: VN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RE = api;
 })(typeof window !== 'undefined' ? window : this);
 </script>
@@ -877,15 +900,15 @@ function notices() {
     const u = Object.keys(A.unknownOC); if (u.length) add('warn', 'Order Category chưa gán kênh (' + l + ')', 'Gán kênh ở bước 1 để tính đúng cơ cấu và hoa hồng.', u);
     if (!A.hasDish) add('warn', 'Thiếu Dish Sales (' + l + ')', 'Không tính được số món, giảm giá, số khách và phân tích menu cho kỳ này.');
     if (!A.hasTime) add('info', 'Thiếu Time Sales (' + l + ')', 'Chưa phân tích được theo khung giờ.');
-    const mp = Object.keys(A.missingPrice); if (mp.length) add('info', mp.length + ' món chưa có giá niêm yết (' + l + ')', 'Tạm dùng giá cao nhất trong kỳ.', mp);
+    const mp = Object.keys(A.missingPrice); if (mp.length) add('info', mp.length + ' món chưa có giá niêm yết (' + l + ')', 'Tạm dùng giá bán phổ biến nhất của món trên từng kênh.', mp);
     const mc = Object.keys(A.missingCost); if (mc.length) add('warn', mc.length + ' món chưa có giá vốn (' + l + ')', 'Giá vốn của các món này tạm tính bằng 0, lãi gộp có thể cao hơn thực tế.', mc);
   });
   S.per.forEach((p, i) => p.files.forEach(f => { if (f.bad) add('warn', f.bad + ' dòng bị bỏ qua (' + (i ? L.p1 : L.p0) + ')', f.name + ': các dòng có doanh thu nhưng thiếu ngày, số bill hoặc giờ. Số liệu kỳ này đang thiếu, kiểm tra lại file xuất từ POS.'); }));
-  if (A1.discEst) add('info', 'Giảm giá đang là số ước tính', 'Báo cáo POS không có tiền giảm giá. Công cụ lấy giá cao nhất của mỗi món trong kỳ làm giá niêm yết. Nhập bảng giá menu để có số chính xác.');
+  if (A1.discEst) add('info', 'Giảm giá đang là số ước tính', 'Báo cáo POS không có tiền giảm giá. Công cụ lấy giá bán phổ biến nhất của mỗi món trên từng kênh làm giá niêm yết (app có bảng giá riêng cao hơn tại quầy). Nhập bảng giá menu để có số chính xác hơn.');
   const rs = {}; S.per.forEach(p => p.files.forEach(f => (f.rest || []).forEach(x => rs[x] = 1)));
   if (Object.keys(rs).length > 1) add('warn', 'Có nhiều nhà hàng trong dữ liệu', 'Kết quả đang cộng chung các nhà hàng.', Object.keys(rs));
   if (A0.dates.length && A1.dates.length && A0.dates[A0.dates.length - 1] >= A1.dates[0] && A1.dates[A1.dates.length - 1] >= A0.dates[0]) add('warn', 'Hai kỳ bị trùng ngày', 'Kỳ so sánh và kỳ hiện tại có ngày chồng nhau. Kiểm tra lại file đã thả vào từng kỳ.');
-  if (A0.days !== A1.days) add('info', 'Số ngày mở cửa khác nhau', L.p0 + ': ' + A0.days + ' ngày, ' + L.p1 + ': ' + A1.days + ' ngày. Phần chênh nằm ở hiệu ứng "Số ngày mở cửa" (Level 03).');
+  if (A0.days !== A1.days) add('info', 'Số ngày mở cửa khác nhau', L.p0 + ': ' + A0.days + ' ngày, ' + L.p1 + ': ' + A1.days + ' ngày. Phần chênh nằm ở hiệu ứng "Số ngày mở cửa" (Level 03). Nếu một kỳ chưa hết tháng, nên xuất kỳ so sánh cùng khoảng ngày (ví dụ 1–24 tháng trước) để so sánh công bằng.');
   const nw = R.L2.rows.filter(r => r.flag === 'new').map(r => r.key), ls = R.L2.rows.filter(r => r.flag === 'lost').map(r => r.key);
   if (nw.length) add('info', 'Kênh mới trong kỳ hiện tại', 'Toàn bộ giá trị của kênh mới nằm ở hiệu ứng Mix.', nw);
   if (ls.length) add('info', 'Kênh không còn phát sinh', 'Phần giảm của các kênh này nằm ở Traffic và Mix.', ls);
@@ -1094,7 +1117,7 @@ function treeData() {
   const { R } = S.res, T2 = R.L2.T, L3 = R.L3, base = Math.abs(R.L1.m0);
   const nd = (id, n, v, f, d) => ({ id, n, v, f, d });
   const t = { root: nd('root', 'Chênh lệch ' + (R.profit ? 'lãi gộp' : 'doanh thu'), R.L1.delta, 'M1 − M0', 'Kết quả kỳ hiện tại trừ kỳ so sánh.'), base: base, br: [] };
-  t.br.push({ n: nd('traffic', 'Số bill (Traffic)', T2.traffic, '(TC1 − TC0) × W0', 'W0 = ' + (R.profit ? 'lãi gộp/bill' : 'giá trị bill TB') + ' kỳ so sánh (' + M(L3.W) + ').'), kids: [nd('days', 'Số ngày mở cửa', L3.days, '(D1/D0 − 1) × TC0 × W0', 'Phần bill tăng/giảm do số ngày mở cửa thay đổi.'), nd('prod', 'Bill/ngày', L3.prod, '(TC1/TC0 − D1/D0) × TC0 × W0', 'Năng suất thật: số bill mỗi ngày.')] });
+  t.br.push({ n: nd('traffic', 'Số bill (Traffic)', T2.traffic, '(TC1 − TC0) × W0', 'W0 = ' + (R.profit ? 'lãi gộp/bill' : 'giá trị bill TB') + ' kỳ so sánh (' + M(L3.W) + ').'), kids: [nd('days', 'Số ngày mở cửa', L3.days, '(D1/D0 − 1) × TC0 × W0', 'Phần bill tăng/giảm do số ngày mở cửa thay đổi.'), nd('daymix', 'Ngày cuối tuần', L3.daymix, '(Σ D1,loại × TC0,loại/D0,loại − TC0 × D1/D0) × W0', 'Kỳ có nhiều hay ít ngày T7–CN hơn; loại ngày = ngày thường (T2–T6) hoặc cuối tuần.'), nd('prod', 'Bill/ngày cùng loại ngày', L3.prod, '(TC1 − Σ D1,loại × TC0,loại/D0,loại) × W0', 'Năng suất thật: bill mỗi ngày so với cùng loại ngày kỳ trước.')] });
   t.br.push({ n: nd('mix', 'Cơ cấu kênh (Mix)', T2.mix, 'Σ (TC1,k − TC0,k × TC1/TC0) × W0,k', 'Dịch chuyển bill giữa các kênh có giá trị khác nhau.'), kids: [] });
   t.br.push({ n: nd('check', 'Giá trị bill cùng kênh', T2.check, 'Σ (TA1,k − TA0,k) × TC1,k', 'TA từng kênh thay đổi khi giữ nguyên cơ cấu.'), kids: [nd('upt', 'Số món/bill', T2.upt, 'TC1 × (UPT1 − UPT0) × Giá0 × Thực thu0', 'Bán kèm, số món mỗi bill.'), nd('price', 'Giá TB/món', T2.price, 'TC1 × UPT1 × (Giá1 − Giá0) × Thực thu0', 'Giá niêm yết trung bình mỗi món (đổi giá, đổi cơ cấu món).'), nd('disc', 'Giảm giá', T2.disc, 'TC1 × UPT1 × Giá1 × (Thực thu1 − Thực thu0)', 'Thực thu = doanh thu thuần ÷ doanh thu theo giá niêm yết.')] });
   if (R.profit) t.br.push({ n: nd('cost', 'Chi phí', T2.cost, '−Σ (CPB1,k − CPB0,k) × TC1,k', 'Chi phí trên mỗi bill thay đổi.'), kids: [nd('food', 'Giá vốn NVL', T2.food, '−Σ (Giá vốn/bill1 − Giá vốn/bill0) × TC1', 'Theo định lượng món.'), nd('comm', 'Hoa hồng app', T2.comm, '−Σ (Hoa hồng/bill1 − Hoa hồng/bill0) × TC1', 'Theo % hoa hồng từng kênh.')] });
@@ -1122,7 +1145,7 @@ function bridgeBars(R, lv, L) {
   if (lv === 1) b.push({ l: 'Số bill', v: T1.traffic }, { l: 'Số món/bill', v: T1.upt }, { l: 'Giá TB/món', v: T1.price }, { l: 'Giảm giá', v: T1.disc });
   if (lv === 1 && R.profit) b.push({ l: 'Giá vốn', v: T1.food }, { l: 'Hoa hồng app', v: T1.comm });
   if (lv === 2) b.push({ l: 'Số bill', v: T2.traffic }, { l: 'Cơ cấu kênh', v: T2.mix }, { l: 'Số món/bill', v: T2.upt }, { l: 'Giá TB/món', v: T2.price }, { l: 'Giảm giá', v: T2.disc });
-  if (lv === 3) b.push({ l: 'Số ngày mở cửa', v: R.L3.days }, { l: 'Bill/ngày', v: R.L3.prod }, { l: 'Cơ cấu kênh', v: T2.mix }, { l: 'Bill cùng kênh', v: T2.check });
+  if (lv === 3) b.push({ l: 'Số ngày mở cửa', v: R.L3.days }, { l: 'Ngày cuối tuần', v: R.L3.daymix }, { l: 'Bill/ngày', v: R.L3.prod }, { l: 'Cơ cấu kênh', v: T2.mix }, { l: 'Bill cùng kênh', v: T2.check });
   if (lv >= 2 && R.profit) b.push({ l: 'Giá vốn', v: T2.food }, { l: 'Hoa hồng app', v: T2.comm });
   b.push({ l: L.p1, v: T1.m1, t: 'cur' });
   return b;
@@ -1158,7 +1181,8 @@ function renderPanel() {
     h += head(I.lv[3].title, L) + '<div class="two"><div>' + wf(bridgeBars(R, 3, L), base) + '</div>' + takeaways(I.lv[3]) + '</div>';
     const d0 = A0.dates.filter(d => A0.daily[d]).map(d => ({ d, v: A0.daily[d].net })), d1 = A1.dates.filter(d => A1.daily[d]).map(d => ({ d, v: A1.daily[d].net }));
     if (d0.length > 1 || d1.length > 1) { draws.push(['dc', lines(d0, d1, M)]); h += '<div class="tools"><b>Doanh thu theo ngày trong kỳ</b>' + legend2(L) + '<span class="hint">Trục ngang: ngày thứ n của kỳ</span></div><div class="fig sm" id="dc"></div>'; }
-    const rows = [['Số ngày mở cửa', A0.days, A1.days, E.n0], ['Bill/ngày', k0.tcDay, k1.tcDay, E.n1], ['Doanh thu/ngày', k0.netDay, k1.netDay, M], ['Khách tại chỗ', A0.guestsDI, A1.guestsDI, E.n0], ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, v => E.nf2.format(v)], ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, M], ['Vòng quay ghế (khách/ghế/ngày)', k0.turnover, k1.turnover, v => E.nf2.format(v)], ['Doanh thu/ghế/ngày', k0.seatDay, k1.seatDay, M]]
+    const w0 = R.L3.wk0, w1 = R.L3.wk1, per = (x, f) => x.d ? x[f] / x.d : null;
+    const rows = [['Số ngày mở cửa', A0.days, A1.days, E.n0], ['Số ngày cuối tuần (T7–CN)', w0.we.d, w1.we.d, E.n0], ['Bill/ngày', k0.tcDay, k1.tcDay, E.n1], ['Bill/ngày thường (T2–T6)', per(w0.wd, 'tc'), per(w1.wd, 'tc'), E.n1], ['Bill/ngày cuối tuần', per(w0.we, 'tc'), per(w1.we, 'tc'), E.n1], ['Doanh thu/ngày thường', per(w0.wd, 'net'), per(w1.wd, 'net'), M], ['Doanh thu/ngày cuối tuần', per(w0.we, 'net'), per(w1.we, 'net'), M],['Doanh thu/ngày', k0.netDay, k1.netDay, M], ['Khách tại chỗ', A0.guestsDI, A1.guestsDI, E.n0], ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, v => E.nf2.format(v)], ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, M], ['Vòng quay ghế (khách/ghế/ngày)', k0.turnover, k1.turnover, v => E.nf2.format(v)], ['Doanh thu/ghế/ngày', k0.seatDay, k1.seatDay, M]]
       .filter(x => x[1] != null && x[2] != null).map(x => tr([x[0], esc(x[3](x[1])), esc(x[3](x[2])), '<span class="' + cls(x[2] - x[1]) + '">' + esc(SP(E.div(x[2] - x[1], x[1]))) + '</span>']));
     h += '<div class="tools"><b>Công suất và năng suất</b>' + (S.cfg.seats ? '' : '<span class="hint">Nhập số ghế ở bước 1 để có vòng quay ghế</span>') + '</div>' + table(['Chỉ số', esc(L.p0), esc(L.p1), 'Δ%'], rows);
   } else if (lv === 4) {
@@ -1250,7 +1274,7 @@ function renderReport() {
   const chRows = R.L2.rows.slice().sort((a, b) => b.net1 - a.net1);
   let s2 = '<div class="sheet" id="sh2">' + band(2) + '<h2>Phụ lục: kênh, công suất và KPI</h2><div class="cols"><div><h4>Theo kênh (Level 02)</h4><table><thead><tr><th class="l">Kênh</th><th>Bill</th><th>TA</th><th>Doanh thu</th><th>Mix</th><th>Bill cùng kênh</th><th>Chênh lệch</th></tr></thead><tbody>' +
     chRows.map(x => '<tr><td class="l">' + esc(x.key) + '</td><td>' + E.n0(x.tc0) + ' → ' + E.n0(x.tc1) + '</td><td>' + esc(M(x.ta1)) + '</td><td>' + esc(M(x.net1)) + '</td><td>' + sg(x.mix) + '</td><td>' + sg(x.check) + '</td><td>' + sg(x.delta) + '</td></tr>').join('') + '</tbody></table>' +
-    '<h4>Công suất (Level 03)</h4><table><tbody>' + [['Số ngày mở cửa', A0.days + ' → ' + A1.days, SM(R.L3.days)], ['Bill/ngày', E.n1(k0.tcDay) + ' → ' + E.n1(k1.tcDay), SM(R.L3.prod)]].concat(k1.turnover != null ? [['Vòng quay ghế', (k0.turnover != null ? E.nf2.format(k0.turnover) + ' → ' : '') + E.nf2.format(k1.turnover), '']] : []).map(x => '<tr><td class="l">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td><td>' + (x[2] ? '<span class="' + (x[2].charAt(0) === '−' ? 'm' : 'p') + '">' + esc(x[2]) + '</span>' : '') + '</td></tr>').join('') + '</tbody></table>' +
+    '<h4>Công suất (Level 03)</h4><table><tbody>' + [['Số ngày mở cửa', A0.days + ' → ' + A1.days, SM(R.L3.days)], ['Ngày cuối tuần (T7–CN)', R.L3.wk0.we.d + ' → ' + R.L3.wk1.we.d, SM(R.L3.daymix)], ['Bill/ngày', E.n1(k0.tcDay) + ' → ' + E.n1(k1.tcDay), SM(R.L3.prod)]].concat(k1.turnover != null ? [['Vòng quay ghế', (k0.turnover != null ? E.nf2.format(k0.turnover) + ' → ' : '') + E.nf2.format(k1.turnover), '']] : []).map(x => '<tr><td class="l">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td><td>' + (x[2] ? '<span class="' + (x[2].charAt(0) === '−' ? 'm' : 'p') + '">' + esc(x[2]) + '</span>' : '') + '</td></tr>').join('') + '</tbody></table>' +
     (S.cfg.events.length ? '<h4>Nhật ký sự kiện</h4><ul class="bl">' + S.cfg.events.map(e => '<li><b>' + esc(e[0]) + '.</b> ' + esc(e[1]) + '</li>').join('') + '</ul>' : '') +
     '</div><div><h4>Scorecard</h4><table><thead><tr><th class="l">Chỉ số</th><th>' + esc(L.p0) + '</th><th>' + esc(L.p1) + '</th><th>Δ</th><th></th></tr></thead><tbody>' +
     r.sc.slice(0, 17).map(x => '<tr><td class="l">' + esc(x.name) + '</td><td>' + (x.a == null ? '–' : esc(x.f(x.a))) + '</td><td>' + (x.b == null ? '–' : esc(x.f(x.b))) + '</td><td>' + (x.a == null || x.b == null ? '' : esc(x.kind === 'pts' ? E.pp(x.a, x.b).replace(' điểm %', 'đ%') : SP(x.rel))) + '</td><td>' + (x.st ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + ({ g: 'var(--pos)', a: '#d99a2b', r: 'var(--neg)' })[x.st] + '"></span>' : '') + '</td></tr>').join('') + '</tbody></table></div></div>' +
@@ -1270,7 +1294,7 @@ function aiCtx() {
     level1: { so_bill: r0(R.L1.traffic), so_mon_bill: r0(R.L1.upt), gia_mon: r0(R.L1.price), giam_gia: r0(R.L1.disc), gia_von: r0(R.L1.food), hoa_hong: r0(R.L1.comm) },
     level2_kenh: R.L2.rows.map(x => ({ kenh: x.key, bill0: x.tc0, bill1: x.tc1, ta0: r0(x.ta0), ta1: r0(x.ta1), mix: r0(x.mix), bill_cung_kenh: r0(x.check), chenh_lech: r0(x.delta) })),
     level2_khung_gio: R.L2dp ? R.L2dp.rows.map(x => ({ khung: x.key, bill0: x.tc0, bill1: x.tc1, chenh_lech: r0(x.delta) })) : null,
-    level3: { so_ngay0: A0.days, so_ngay1: A1.days, hieu_ung_so_ngay: r0(R.L3.days), hieu_ung_bill_ngay: r0(R.L3.prod) },
+    level3: { so_ngay0: A0.days, so_ngay1: A1.days, hieu_ung_so_ngay: r0(R.L3.days), so_ngay_cuoi_tuan0: R.L3.wk0.we.d, so_ngay_cuoi_tuan1: R.L3.wk1.we.d, hieu_ung_ngay_cuoi_tuan: r0(R.L3.daymix), hieu_ung_bill_ngay_cung_loai: r0(R.L3.prod) },
     nhom_mon: R.menu.cats.map(c => ({ nhom: c.cat, chenh_lech: r0(c.delta), san_luong: r0(c.vol), co_cau: r0(c.mix), gia: r0(c.price) })),
     giam_gia_uoc_tinh: A1.discEst, nhat_ky_su_kien: S.cfg.events, canh_bao: S.res.notes.filter(n => n.lv === 'warn').map(n => n.h), y_chinh_hien_tai: I.bullets.map(b => plain(b.t))
   });
@@ -1386,12 +1410,12 @@ async function priceTemplate(btn) {
     const wb = new window.ExcelJS.Workbook(), ws = wb.addWorksheet('Gia mon'), L = lbl();
     ws.addRow(['Món', 'Nhóm', 'Giá kỳ so sánh (gồm VAT)', 'Giá kỳ hiện tại (gồm VAT)', 'VAT %', 'Giá vốn/món (chưa VAT)']);
     ws.getRow(1).eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9C3A5' } }; c.alignment = { wrapText: true }; });
-    const est = [{}, {}], cat = {}, vat = {};
-    [0, 1].forEach(i => ds(i).dish.forEach(r => { if (S.cfg.nonFood.indexOf(r.cat) >= 0 || r.q <= 0 || r.gr <= 0) return; const u = r.gr / r.q; if (!est[i][r.dish] || u > est[i][r.dish]) est[i][r.dish] = u; cat[r.dish] = r.cat; if (r.n > 0) vat[r.dish] = Math.round((r.gr / r.n - 1) * 100); }));
-    Object.keys(cat).sort((a, b) => cat[a].localeCompare(cat[b]) || a.localeCompare(b)).forEach(d => { const p = S.cfg.prices[d] || {}; ws.addRow([d, cat[d], p.l0 || Math.round(est[0][d] || est[1][d] || 0), p.l1 || Math.round(est[1][d] || est[0][d] || 0), p.vat || vat[d] || 8, S.cfg.costs[d] != null ? S.cfg.costs[d] : null]); });
+    const cat = {}, vat = {}, lp = [0, 1].map(i => E.listPrices(ds(i).dish, S.cfg.nonFood)), tpl = (i, d) => lp[i].ch[d + '|Dine In'] || lp[i].dish[d];   // menu price = usual in-store price
+    [0, 1].forEach(i => ds(i).dish.forEach(r => { if (S.cfg.nonFood.indexOf(r.cat) >= 0 || r.q <= 0 || r.gr <= 0) return; cat[r.dish] = r.cat; if (r.n > 0) vat[r.dish] = Math.round((r.gr / r.n - 1) * 100); }));
+    Object.keys(cat).sort((a, b) => cat[a].localeCompare(cat[b]) || a.localeCompare(b)).forEach(d => { const p = S.cfg.prices[d] || {}; ws.addRow([d, cat[d], p.l0 || Math.round(tpl(0, d) || tpl(1, d) || 0), p.l1 || Math.round(tpl(1, d) || tpl(0, d) || 0), p.vat || vat[d] || 8, S.cfg.costs[d] != null ? S.cfg.costs[d] : null]); });
     ws.columns = [{ width: 44 }, { width: 20 }, { width: 18 }, { width: 18 }, { width: 8 }, { width: 18 }];
     ws.eachRow((row, n) => { if (n > 1) [3, 4, 6].forEach(j => row.getCell(j).numFmt = '#,##0'); });
-    const g = wb.addWorksheet('Huong dan'); ['Giá đã điền sẵn là giá cao nhất thấy trong dữ liệu (ước tính). Sửa lại theo bảng giá menu thật.', 'Giá vốn/món: theo định lượng, chưa VAT. Để trống nếu chưa có.', 'Lưu file rồi nhập lại bằng nút "Nhập file giá và giá vốn".', 'Kỳ: ' + L.p0 + ' và ' + L.p1].forEach(t => g.addRow([t])); g.getColumn(1).width = 100;
+    const g = wb.addWorksheet('Huong dan'); ['Giá đã điền sẵn là giá bán tại quầy phổ biến nhất trong dữ liệu (ước tính). Sửa lại theo bảng giá menu thật.', 'Chỉ cần giá menu tại quầy: giá riêng trên app (ShopeeFood, Grab...) được nhận diện tự động theo từng kênh.', 'Giá vốn/món: theo định lượng, chưa VAT. Để trống nếu chưa có.', 'Lưu file rồi nhập lại bằng nút "Nhập file giá và giá vốn".', 'Kỳ: ' + L.p0 + ' và ' + L.p1].forEach(t => g.addRow([t])); g.getColumn(1).width = 100;
     await save('gia-mon-va-gia-von.xlsx', new Blob([await wb.xlsx.writeBuffer()]));
   } catch (e) { toast('Chưa tạo được file mẫu'); }
   btn.disabled = false;
