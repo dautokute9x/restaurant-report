@@ -557,11 +557,16 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     return { profit: profit, L1: L1, L2: L2, L2dp: L2dp, L3: L3, menu: M, checks: checks, ok: ok, k0: kpis(A0, profit), k1: kpis(A1, profit) };
   }
 
-  function weekMix(A) {   // open days and bills split weekday (Mon-Fri) / weekend (Sat-Sun), from Dish Sales days
-    var o = { wd: { d: 0, tc: 0, net: 0 }, we: { d: 0, tc: 0, net: 0 } };
-    keys(A.daily).forEach(function (d) { var w = new Date(d + 'T00:00:00Z').getUTCDay(), x = o[w === 0 || w === 6 ? 'we' : 'wd']; x.d++; x.tc += A.daily[d].tc; x.net += A.daily[d].net; });
+  function byWeekday(A) {   // open days, bills and net per weekday, index 0 = Monday (T2) ... 6 = Sunday (CN), from Dish Sales days
+    var o = [0, 1, 2, 3, 4, 5, 6].map(function () { return { d: 0, tc: 0, net: 0 }; });
+    keys(A.daily).forEach(function (d) { var x = o[(new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7]; x.d++; x.tc += A.daily[d].tc; x.net += A.daily[d].net; });
     return o;
   }
+  function weekMix(A) {   // weekday (T2-T6) / weekend (T7-CN) totals
+    var w = byWeekday(A), add = function (a) { return a.reduce(function (s, x) { return { d: s.d + x.d, tc: s.tc + x.tc, net: s.net + x.net }; }, { d: 0, tc: 0, net: 0 }); };
+    return { wd: add(w.slice(0, 5)), we: add(w.slice(5)) };
+  }
+  function perDay(x, f) { return x.d ? x[f] / x.d : 0; }
 
   function menuBridge(A0, A1, profit) {
     var D0 = A0.dishes, D1 = A1.dishes, names = keys(D0).concat(keys(D1).filter(function (k) { return !(k in D0); }));
@@ -662,7 +667,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
         { h: 'Giá trị bill cùng kênh', t: 'Khi giữ nguyên cơ cấu, TA từng kênh thay đổi tác động **' + sMoney(T2.check) + '** (số món ' + sMoney(T2.upt) + ', giá ' + sMoney(T2.price) + ', giảm giá ' + sMoney(T2.disc) + ').' }
       ] };
     var L3 = R.L3;
-    var w0 = L3.wk0, w1 = L3.wk1, bpd = function (x) { return n1(div(x.tc, x.d)); }, big = [['days', L3.days], ['daymix', L3.daymix], ['prod', L3.prod]].sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); })[0][0];
+    var w0 = L3.wk0, w1 = L3.wk1, bpd = function (x) { return n1(perDay(x, 'tc')); }, big = [['days', L3.days], ['daymix', L3.daymix], ['prod', L3.prod]].sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); })[0][0];
     lv[3] = { title: big === 'days' ? 'Trading days drove traffic' : big === 'daymix' ? 'The weekend calendar drove traffic' : 'Bills per day ' + (L3.prod >= 0 ? 'improved' : 'declined') + ' on a like-for-like basis',
       bullets: [
         { h: 'Số ngày mở cửa', t: A0.days + ' → ' + A1.days + ' ngày, tác động **' + sMoney(L3.days) + '**.' },
@@ -691,7 +696,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 
   var api = { num: num, txt: txt, day: day, detect: detect, parseSheet: parseSheet, aggregate: aggregate, analyze: analyze, bridge: bridge, kpis: kpis, insights: insights, drivers: drivers,
     money: money, sMoney: sMoney, full: full, pct: pct, sPct: sPct, pp: pp, n1: n1, n0: n0, nf2: nf2, div: div,
-    listPrices: listPrices, NONFOOD: NONFOOD, CHANNELS: CHANNELS, DAYPARTS: DAYPARTS, REPORTS: REPORTS, VN: VN };
+    listPrices: listPrices, byWeekday: byWeekday, perDay: perDay, NONFOOD: NONFOOD, CHANNELS: CHANNELS, DAYPARTS: DAYPARTS, REPORTS: REPORTS, VN: VN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RE = api;
 })(typeof window !== 'undefined' ? window : this);
 </script>
@@ -793,8 +798,14 @@ const E = window.RE;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const LS = 'rpr.v1';
 const LIBS = { xlsx: 'vendor/exceljs.min.js' };
-const DEF = () => ({ chanMap: Object.assign({}, E.CHANNELS), comm0: {}, comm1: {}, dayparts: E.DAYPARTS.map(x => Object.assign({}, x)), nonFood: E.NONFOOD.slice(), seats: 0, area: 0, plan: { net: 0, tc: 0, food: 0 }, thr: 5, prices: {}, costs: {}, events: [], actions: null, l0: 'Kỳ so sánh', l1: 'Kỳ hiện tại', kind: 'Tháng trước' });
-function loadCfg() { try { const c = JSON.parse(localStorage.getItem(LS)); return c ? Object.assign(DEF(), c) : DEF(); } catch (e) { return DEF(); } }
+const DEF = () => ({ chanMap: Object.assign({}, E.CHANNELS), comm0: {}, comm1: {}, dayparts: E.DAYPARTS.map(x => Object.assign({}, x)), nonFood: E.NONFOOD.slice(), nfv: 1, seats: 0, area: 0, plan: { net: 0, tc: 0, food: 0 }, thr: 5, prices: {}, costs: {}, events: [], actions: null, l0: 'Kỳ so sánh', l1: 'Kỳ hiện tại', kind: 'Tháng trước' });
+function loadCfg() {
+  try {
+    const c = JSON.parse(localStorage.getItem(LS)); if (!c) return DEF();
+    if (!c.nfv) { c.nonFood = [...new Set((c.nonFood || []).concat(E.NONFOOD))]; c.nfv = 1; }   // settings saved before add-ons joined the defaults
+    return Object.assign(DEF(), c);
+  } catch (e) { return DEF(); }
+}
 const S = { sample: false, per: [{ files: [] }, { files: [] }], cfg: DEF(), res: null, page: 1, tab: 1, dim: 'ch', mv: 'cat', dirty: true, expand: {}, sel: null, dl: null, sm: null };
 const IDB = { open() { return new Promise((ok, no) => { const r = indexedDB.open('rpr', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); },
   async get(k) { const db = await IDB.open(); return new Promise(ok => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); }); },
@@ -1217,7 +1228,7 @@ function renderPanel() {
     const d0 = A0.dates.filter(d => A0.daily[d]).map(d => ({ d, v: A0.daily[d].net })), d1 = A1.dates.filter(d => A1.daily[d]).map(d => ({ d, v: A1.daily[d].net }));
     if (d0.length > 1 || d1.length > 1) { draws.push(['dc', lines(d0, d1, M)]); h += '<div class="tools"><b>Doanh thu theo ngày trong kỳ</b>' + legend2(L) + '<span class="hint">Trục ngang: ngày thứ n của kỳ</span></div><div class="fig sm" id="dc"></div>'; }
     if (A0.hasDish && A1.hasDish) h += weekdaySection(A0, A1, L, draws, 'wdc');
-    const w0 = R.L3.wk0, w1 = R.L3.wk1, per = (x, f) => x.d ? x[f] / x.d : null;
+    const w0 = R.L3.wk0, w1 = R.L3.wk1, per = (x, f) => x.d ? perDay(x, f) : null;   // null hides the row
     const rows = [['Số ngày mở cửa', A0.days, A1.days, E.n0], ['Số ngày cuối tuần (T7–CN)', w0.we.d, w1.we.d, E.n0], ['Bill/ngày', k0.tcDay, k1.tcDay, E.n1], ['Bill/ngày thường (T2–T6)', per(w0.wd, 'tc'), per(w1.wd, 'tc'), E.n1], ['Bill/ngày cuối tuần', per(w0.we, 'tc'), per(w1.we, 'tc'), E.n1], ['Doanh thu/ngày thường', per(w0.wd, 'net'), per(w1.wd, 'net'), M], ['Doanh thu/ngày cuối tuần', per(w0.we, 'net'), per(w1.we, 'net'), M],['Doanh thu/ngày', k0.netDay, k1.netDay, M], ['Khách tại chỗ', A0.guestsDI, A1.guestsDI, E.n0], ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, v => E.nf2.format(v)], ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, M], ['Vòng quay ghế (khách/ghế/ngày)', k0.turnover, k1.turnover, v => E.nf2.format(v)], ['Doanh thu/ghế/ngày', k0.seatDay, k1.seatDay, M]]
       .filter(x => x[1] != null && x[2] != null).map(x => tr([x[0], esc(x[3](x[1])), esc(x[3](x[2])), '<span class="' + cls(x[2] - x[1]) + '">' + esc(SP(E.div(x[2] - x[1], x[1]))) + '</span>']));
     h += '<div class="tools"><b>Công suất và năng suất</b>' + (S.cfg.seats ? '' : '<span class="hint">Nhập số ghế ở bước 1 để có vòng quay ghế</span>') + '</div>' + table(['Chỉ số', esc(L.p0), esc(L.p1), 'Δ%'], rows);
@@ -1235,12 +1246,7 @@ function renderPanel() {
   draws.forEach(([id, fn]) => { const el = $(id); if (el) mount(el, fn); });
 }
 const WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-function byWeekday(A) {   // open days, bills and net per weekday, from Dish Sales days
-  const o = WD.map(() => ({ d: 0, tc: 0, net: 0 }));
-  Object.keys(A.daily).forEach(d => { const x = o[(new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7]; x.d++; x.tc += A.daily[d].tc; x.net += A.daily[d].net; });
-  return o;
-}
-const perDay = (x, f) => x.d ? x[f] / x.d : 0;
+const { byWeekday, perDay } = E;
 function weekdaySection(A0, A1, L, draws, id) {   // A0 null = one period only
   const w0 = A0 ? byWeekday(A0) : null, w1 = byWeekday(A1);
   draws.push([id, groupBars(WD, WD.map((_, i) => w0 ? perDay(w0[i], 'net') : 0), w1.map(x => perDay(x, 'net')), M)]);
@@ -1568,8 +1574,8 @@ $('sampleBtn').onclick = () => { loadSample(); showPage(2); };
   else loadSample();
   const ok = hasData(0) || hasData(1);
   const start = { 'du-lieu': 1, 'phan-tich': 2, 'bao-cao': 3 }[location.hash.slice(1)] || (ok ? 2 : 1);
-  showPage(ok ? start : 1);
   initClaude();
+  showPage(ok ? start : 1);
 })();
 }
 </script>

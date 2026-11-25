@@ -72,4 +72,8 @@ const AD = E.aggregate({ dish: ad }, { costs: { X: 30000, Sauce: 3000 } });
 assert.strictEqual(AD.items, 1);
 assert.strictEqual(AD.food, 36000);
 
+// weekday buckets: 2026-11-02 is a Monday (T2), 2026-11-08 a Sunday (CN); weekend mix is built from them
+const WK = E.aggregate({ dish: bills('2026-11-02', 2).concat(bills('2026-11-08', 3)) }, {});
+assert.deepStrictEqual(E.byWeekday(WK).map(x => x.tc), [2, 0, 0, 0, 0, 0, 3]);
+
 console.log('ok');
