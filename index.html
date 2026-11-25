@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Phân tích và báo cáo kết quả kinh doanh nhà hàng từ báo cáo POS">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2716%27 fill=%27%234a3516%27/%3E%3Ctext x=%2716%27 y=%2722%27 text-anchor=%27middle%27 font-size=%2718%27 font-family=%27sans-serif%27 fill=%27%23efece0%27%3E%CE%94%3C/text%3E%3C/svg%3E">
+<title>Restaurant Performance Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE  a restaurant manager's monthly review: calm, exact, numbers first, then what to do
+   IDEA   a bridge ledger: every đồng of change is placed on one bar of the walk from last period to this one
+   PICTURE the IBCS waterfall and the driver tree, large, at the top of each level
+   COLOUR warm paper ground, ink-brown type, green for gains, red for losses, grey-beige for the base period
+   TYPE   Quicksand 500-700, tabular figures; LAYOUT sticky step bar, wide cards, report sheets as A4 landscape */
+:root{color-scheme:light dark;
+ --bg:light-dark(#efece0,#17130e);--paper:light-dark(#f7f5ec,#211b14);--card:light-dark(rgba(247,245,236,.94),rgba(33,27,20,.94));
+ --ink:light-dark(#2b2116,#efe7d6);--brown:light-dark(#4a3516,#e3cfa8);--mut:light-dark(#7a6f5c,#a89a80);--line:light-dark(#dcd6c3,#3a3126);
+ --pos:light-dark(#3f8f5a,#6cc28a);--neg:light-dark(#c0392b,#ef6f60);--base:light-dark(#b9b2a0,#6f6757);--cur:light-dark(#2b2116,#efe7d6);
+ --black:light-dark(#0b0b0b,#efe7d6);--onblack:light-dark(#efece0,#17130e);--field:light-dark(#fff,#2a2219);--soft:light-dark(rgba(255,255,255,.6),rgba(255,255,255,.05));--warn:light-dark(#fff3e0,#3a2a12)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html{scroll-padding-top:80px}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 15.5px/1.55 "Quicksand",system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+input,select,textarea,button{font:inherit;color:inherit}
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg i{position:absolute;border-radius:50%;animation:drift 32s ease-in-out infinite alternate;opacity:.9}
+.bg i:nth-child(1){width:720px;height:720px;left:-260px;top:-240px;background:radial-gradient(circle,light-dark(rgba(229,220,192,.95),rgba(90,70,40,.35)),transparent 68%)}
+.bg i:nth-child(2){width:820px;height:820px;right:-300px;top:18%;background:radial-gradient(circle,light-dark(rgba(232,224,201,.9),rgba(80,62,36,.3)),transparent 68%);animation-duration:38s}
+.bg:after{content:"";position:absolute;inset:0;opacity:.22;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .3 0 0 0 0 .25 0 0 0 0 .18 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+@keyframes drift{to{transform:translate3d(70px,50px,0)}}
+.wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 max(3vw,16px)}
+/* top bar */
+.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;min-height:62px;flex-wrap:wrap;padding-block:8px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16.5px;color:var(--brown);white-space:nowrap}
+.logo b{width:26px;height:26px;border-radius:50%;background:var(--brown);color:var(--bg);display:grid;place-items:center;font-size:14px}
+.steps{display:flex;gap:4px;margin:0 auto;flex-wrap:wrap}
+.steps button{border:0;background:none;color:var(--mut);padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center;min-height:40px}
+.steps button b{width:21px;height:21px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;font-size:11px}
+.steps button.on{color:var(--ink);background:var(--soft)}.steps button:disabled{opacity:.4;cursor:default}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-weight:700;font-size:14px;border:1px solid var(--black);background:var(--black);color:var(--onblack);border-radius:11px;padding:10px 16px;cursor:pointer;display:inline-flex;gap:9px;align-items:center;min-height:42px;transition:transform .2s,box-shadow .2s,background .2s;box-shadow:0 10px 22px -14px rgba(0,0,0,.6);white-space:nowrap}
+.btn:hover{transform:translateY(-1px)}.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn.ghost{background:var(--soft);color:var(--ink);border-color:var(--line);box-shadow:none}.btn.ghost:hover{background:var(--field)}
+.btn.sm{padding:6px 12px;font-size:13px;min-height:36px;border-radius:9px}
+.btn:focus-visible,.steps button:focus-visible,.tb:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brown);outline-offset:2px}
+.banner{position:relative;z-index:1;background:var(--black);color:var(--onblack);font-size:13.5px;font-weight:600}
+.banner .wrap{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:8px}
+.banner button{background:none;border:1px solid currentColor;color:inherit;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:700}
+/* pages */
+.page{display:none;position:relative;z-index:1;padding-bottom:110px}.page.on{display:block;animation:pgIn .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pgIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+h1{font-size:clamp(28px,3.6vw,42px);line-height:1.08;margin:28px 0 8px;font-weight:700;color:var(--brown);letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:clamp(24px,3vw,36px);line-height:1.12;margin:8px 0 14px;font-weight:700;color:var(--brown);letter-spacing:-.02em;text-wrap:balance}
+h3{font-size:clamp(19px,2vw,24px);line-height:1.2;margin:0 0 4px;font-weight:700;color:var(--brown);text-wrap:balance}
+.sub{color:var(--mut);max-width:680px;margin:0 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px 22px;margin-bottom:16px}
+.eyebrow{font-size:13px;font-weight:700;color:var(--mut);margin-bottom:8px}
+.hint{font-size:13px;color:var(--mut);font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--mut)}
+input,select,textarea{font-size:16px;font-weight:600;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px;outline:none;min-height:40px}
+input[type=number]{text-align:right}
+textarea{width:100%;resize:vertical}
+/* drop zones */
+.drop{border:1.5px dashed var(--line);border-radius:16px;padding:18px;text-align:center;background:var(--soft);transition:.2s;cursor:pointer}
+.drop.on{border-color:var(--brown);background:var(--field)}
+.drop b{display:block;font-size:15px}.drop span{font-size:13px;color:var(--mut)}
+.files{margin-top:12px;display:grid;gap:6px}
+.fileit{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13.5px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.fileit i{font-style:normal;font-weight:700;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--black);color:var(--onblack);white-space:nowrap}
+.fileit i.bad{background:var(--neg);color:#fff}
+.fileit small{color:var(--mut);display:block}
+.x{border:0;background:none;color:var(--mut);cursor:pointer;font-size:18px;min-width:32px;min-height:32px}.x:hover{color:var(--neg)}
+.recon{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--soft);white-space:nowrap}
+.chip.ok{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}.chip.bad{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
+details.card>summary{cursor:pointer;font-weight:700;font-size:15.5px;color:var(--brown);list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:32px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary:after{content:"+";font-size:20px;color:var(--mut)}details.card[open]>summary:after{content:"−"}
+details.card>summary small{font-weight:600;color:var(--mut);font-size:13px;margin-left:auto}
+details.card[open]>summary{margin-bottom:12px}
+/* tables */
+.tw{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--field)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{background:light-dark(#f3f0e2,#2a2219);font-weight:700;font-size:12.5px;color:var(--brown);position:sticky;top:0;z-index:1;vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+td.l,th.l{text-align:left}
+tr.tot td{font-weight:700;background:light-dark(#f3f0e2,#2a2219)}
+tbody tr:hover{background:light-dark(#faf8ef,#251f17)}
+td input{width:100%;min-width:70px;border:1px solid transparent;background:transparent;padding:4px 6px;min-height:34px;font-size:14px}
+td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
+.p{color:var(--pos)}.m{color:var(--neg)}
+.vb{display:inline-flex;width:110px;height:10px;position:relative;vertical-align:middle}
+.vb:before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--mut)}
+.vb i{position:absolute;top:0;bottom:0;border-radius:2px}
+/* run bar */
+.run{position:fixed;left:0;right:0;bottom:14px;z-index:25;pointer-events:none}
+.run .in{pointer-events:auto;display:flex;align-items:center;gap:14px;background:light-dark(rgba(11,11,11,.95),rgba(239,231,214,.96));color:var(--onblack);border-radius:18px;padding:10px 12px 10px 20px;box-shadow:0 24px 50px -24px rgba(0,0,0,.8);flex-wrap:wrap}
+.run .st{flex:1;display:flex;gap:22px;flex-wrap:wrap;font-size:13px}
+.run .st small{display:block;opacity:.65;font-size:12px;font-weight:700}
+.run .st b{font-size:15px;font-variant-numeric:tabular-nums}
+.btn.go{background:var(--onblack);color:var(--black);border-color:var(--onblack);padding:11px 22px;font-size:15px}
+/* analysis */
+.exec{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,.85fr);gap:24px;padding:26px 0 8px;align-items:start}
+.tag{display:inline-flex;gap:8px;align-items:center;font-weight:700;font-size:13.5px;color:var(--brown)}
+.tag i{width:20px;height:20px;border-radius:50%;background:var(--brown);color:var(--bg);display:grid;place-items:center;font-style:normal;font-size:11px}
+.bl{list-style:none;margin:0;padding:0;display:grid;gap:9px}.bl li{font-size:15px;line-height:1.5}
+.bl b.p,.bl b.m{white-space:nowrap}
+.kpis{display:grid;gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.kpi small{color:var(--mut);font-weight:700;font-size:13px}
+.kpi b{font-size:clamp(20px,2.2vw,26px);letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi em{font-style:normal;font-size:13px;font-weight:700;white-space:nowrap}
+.kpi.d{background:var(--black);color:var(--onblack);border-color:var(--black)}.kpi.d small{opacity:.7;color:inherit}
+.askrow{display:flex;gap:8px;margin-top:12px}.askrow input{flex:1}
+.ans{margin-top:10px;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 14px;white-space:pre-wrap;font-size:14.5px}
+.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:8px 0 14px}
+.tb{text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:11px 14px;cursor:pointer;transition:.2s;min-height:44px}
+.tb:hover{transform:translateY(-2px)}.tb.on{background:var(--black);color:var(--onblack);border-color:var(--black)}.tb.lock{opacity:.5}
+.tb em{font-style:normal;font-size:12px;font-weight:700;opacity:.7}.tb b{display:block;font-size:16px}.tb span{font-size:12.5px;opacity:.75;display:block}
+.two{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,.9fr);gap:18px;align-items:start}
+.lg{display:flex;gap:14px;font-size:12.5px;font-weight:700;color:var(--mut);margin:6px 0;flex-wrap:wrap}.lg i{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px;vertical-align:-1px}
+.fig{position:relative;min-height:330px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.fig.sm{min-height:240px}
+.take{border-left:3px solid var(--ink);padding-left:16px}
+.take h4,.side h4{margin:0 0 8px;font-size:13px;color:var(--mut)}
+.acts2{margin-top:14px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px}
+.acts2 ul{margin:4px 0 0;padding-left:18px}
+.tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 0 8px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:3px;flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:7px;padding:6px 12px;font-weight:700;font-size:13px;color:var(--mut);cursor:pointer;min-height:34px}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.note{font-size:12.5px;color:var(--mut);font-weight:600;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap}
+.nts{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:0 0 16px;overflow:hidden}
+.nts summary{padding:11px 18px;font-size:13.5px;font-weight:700;color:var(--brown);cursor:pointer;display:flex;justify-content:space-between}
+.nt{display:flex;gap:12px;padding:10px 18px;border-top:1px solid var(--line);align-items:flex-start;font-size:14px}
+.nt i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:700;font-size:12px;color:#fff;background:#8a8068}
+.nt.warn i{background:var(--neg)}.nt.ok i{background:var(--pos)}
+.nt small{display:block;color:var(--mut);font-size:13px}
+/* driver tree */
+.tree{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(0,3fr);gap:0 26px;align-items:center}
+.tree .kids{display:grid;gap:8px;position:relative;padding-left:18px;border-left:1.5px solid var(--line)}
+.br{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,2fr);gap:8px 22px;align-items:center;position:relative}
+.br:before,.leaf:before{content:"";position:absolute;left:-18px;top:50%;width:16px;border-top:1.5px solid var(--line)}
+.br>.kids{padding-left:16px}
+.leafs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;position:relative;padding-left:16px;border-left:1.5px solid var(--line)}
+.leaf{position:relative}
+.leaf:before{left:-16px;width:14px}
+.nd{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--field);border-radius:12px;padding:8px 11px;cursor:pointer;min-height:44px}
+.nd small{display:block;font-size:12.5px;font-weight:700;color:var(--mut)}.nd b{font-size:15.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nd.root{background:var(--black);color:var(--onblack);border-color:var(--black)}.nd.root small{color:inherit;opacity:.7}
+.nd.sel{border-color:var(--brown);box-shadow:0 0 0 3px color-mix(in srgb,var(--brown) 25%,transparent)}
+.nd .bar{display:block;height:3px;border-radius:2px;margin-top:5px}
+.tf{margin-top:12px;font-size:14px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.tf code{display:block;font-size:13px;margin:4px 0;color:var(--brown);overflow-wrap:anywhere}
+.quad{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.quad div{border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:var(--soft);font-size:13px}
+.quad b{display:block;font-size:13.5px}
+/* report */
+.rtools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
+.sheetwrap{overflow-x:auto;padding-bottom:10px}
+.sheet{width:1123px;min-height:794px;background:#fff;color:#1f1a14;--bg:#fff;margin:0 auto 22px;padding:38px 46px;box-shadow:0 24px 60px -30px rgba(0,0,0,.45);border-radius:6px;position:relative;font-size:13.5px;color-scheme:light;--ink:#2b2116;--mut:#6f6553;--line:#e2dccb;--pos:#2f7f4a;--neg:#b8352a;--base:#b9b2a0;--cur:#2b2116;--brown:#4a3516;--field:#fff;--soft:#f6f3ea}
+.sheet .band{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #2b2116;padding-bottom:10px;margin-bottom:16px;font-weight:700;color:#4a3516}
+.sheet .band small{font-weight:600;color:#6f6553}
+.sheet h2{font-size:26px;margin:0 0 14px;color:#2b2116}
+.sheet .k4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.sheet .k4 div{border-top:2px solid #4a3516;padding-top:6px}.sheet .k4 small{display:block;color:#6f6553;font-weight:700;font-size:12px}.sheet .k4 b{font-size:22px;font-variant-numeric:tabular-nums}.sheet .k4 em{font-style:normal;font-size:12.5px;font-weight:700;margin-left:6px}
+.sheet .cols{display:grid;grid-template-columns:1.35fr 1fr;gap:26px}
+.sheet h4{font-size:13px;margin:12px 0 6px;color:#4a3516;border-bottom:1px solid #e2dccb;padding-bottom:4px}
+.sheet .bl li{font-size:13.5px}
+.sheet table{font-size:12.5px}.sheet th{background:#f3f0e2;color:#4a3516;position:static}.sheet td,.sheet th{padding:5px 8px;border-color:#e2dccb}
+.sheet td[contenteditable]{white-space:normal;text-align:left;outline:none;min-width:60px}.sheet td[contenteditable]:focus{background:#fff8e6}
+.sheet .foot{position:absolute;left:46px;right:46px;bottom:16px;font-size:11px;color:#8a8068;display:flex;justify-content:space-between}
+.sheet .fig{min-height:250px}
+.sum{width:100%;min-height:180px;margin-top:10px;font-size:15px;line-height:1.55}
+.toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,20px);opacity:0;z-index:60;background:var(--black);color:var(--onblack);border-radius:12px;padding:10px 16px;font-weight:700;font-size:14px;transition:.3s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.empty{padding:40px 20px;text-align:center;color:var(--mut)}
+@media(max-width:900px){.exec,.two,.grid2,.grid3,.tree,.br{grid-template-columns:minmax(0,1fr)}.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.tree .kids,.leafs{border-left:0;padding-left:0}.br:before,.leaf:before{display:none}.br>.kids{padding-left:0}}
+@media(max-width:600px){.stack thead{display:none}.stack tr{display:grid;padding-block:8px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:9em;text-align:start;white-space:normal}.stack td::before{content:attr(data-l);float:inline-start;width:8.5em;margin-inline-start:-9em;white-space:normal;color:var(--mut);font-weight:700;font-size:12px}.stack td:empty{display:none}body{font-size:15px}.steps{order:3;width:100%;justify-content:center}.run .st{gap:12px}.tabs{grid-template-columns:minmax(0,1fr)}table{font-size:12.5px}}
+@page{size:A4 landscape;margin:6mm}
+@media print{body{background:#fff}.top,.banner,.bg,.run,.toast,footer,#p1,#p2,.rtools,.sum,#p3 h1,#p3 .sub,.noprint{display:none!important}#p3{display:block!important;padding:0}.wrap{padding:0;max-width:none}.sheetwrap{overflow:visible;margin:0!important}.sheet{box-shadow:none;margin:0;border-radius:0;break-after:page;zoom:.93}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="bg"><i></i><i></i></div>
+<header class="top"><div class="wrap">
+ <div class="logo"><b>Δ</b><span>Restaurant Performance Report</span></div>
+ <nav class="steps" id="steps">
+  <button data-p="1"><b>1</b>Dữ liệu</button><button data-p="2"><b>2</b>Phân tích</button><button data-p="3"><b>3</b>Báo cáo</button>
+ </nav>
+ <div class="acts"><button class="btn ghost sm" id="xlsx">Excel</button><button class="btn ghost sm" id="pdf">PDF</button></div>
+</div></header>
+<div class="banner" id="banner" hidden><div class="wrap"><span>Đang xem <b>dữ liệu mẫu giả lập</b>: menu và giá lấy từ TPC_062 ngày 23/11, số lượng, giá vốn, hoa hồng và kế hoạch là số giả định. Thả file POS của bạn vào để thay thế.</span><button id="bannerGo">Tải file POS của bạn</button></div></div>
+
+<!-- ============ PAGE 1: INPUTS ============ -->
+<section class="page" id="p1"><div class="wrap">
+ <div class="row" style="justify-content:space-between;align-items:flex-end"><h1>Dữ liệu hai kỳ</h1><button class="btn ghost sm" id="sampleBtn" style="margin-bottom:10px">Xem dữ liệu mẫu</button></div>
+ <p class="sub">Kéo thả nguyên file xuất từ POS (Dish Sales, Order Type, Time Sales, Promotion) cho từng kỳ. Công cụ tự nhận loại báo cáo, bỏ dòng Subtotal/Totals, tính lại TA, số khách và đối chiếu tổng giữa các báo cáo. Dữ liệu chỉ được xử lý và lưu trong trình duyệt này, không gửi lên máy chủ nào.</p>
+ <div class="grid2" id="periods"></div>
+ <div class="grid2">
+  <details class="card" open><summary>Kênh bán và hoa hồng app <small id="chanHint"></small></summary>
+   <p class="hint" style="margin-top:0">Kênh lấy theo cột Order Category của Dish Sales. Xanh Ngon được tách khỏi "Take Away - Customer" để tính hoa hồng.</p>
+   <div class="tw"><table><thead><tr><th>Order Category (POS)</th><th class="l">Kênh</th></tr></thead><tbody id="chanMap"></tbody></table></div>
+   <div class="tw" style="margin-top:10px"><table><thead><tr><th>Kênh</th><th>Hoa hồng % <span class="lbl0"></span></th><th>Hoa hồng % <span class="lbl1"></span></th></tr></thead><tbody id="commTb"></tbody></table></div>
+  </details>
+  <details class="card" open><summary>Nhà hàng và kế hoạch</summary>
+   <div class="grid2">
+    <label class="f">Số ghế<input id="seats" type="number" min="0" inputmode="numeric"></label>
+    <label class="f">Diện tích (m²)<input id="area" type="number" min="0" inputmode="numeric"></label>
+    <label class="f">Kế hoạch doanh thu thuần<input id="planNet" type="text" inputmode="numeric" placeholder="vd 900.000.000"></label>
+    <label class="f">Kế hoạch số bill<input id="planTc" type="text" inputmode="numeric"></label>
+    <label class="f">Kế hoạch food cost %<input id="planFood" type="number" step="0.1"></label>
+    <label class="f">Ngưỡng đèn đỏ (% xấu đi)<input id="thr" type="number" step="0.5" min="0"></label>
+   </div>
+   <p class="eyebrow" style="margin-top:14px">Khung giờ (giờ bắt đầu – kết thúc)</p>
+   <div class="grid2" id="dayparts"></div>
+  </details>
+  <details class="card"><summary>Bảng giá menu và giá vốn <small id="priceHint"></small></summary>
+   <p class="hint" style="margin-top:0">Báo cáo POS không có tiền giảm giá (Gross Sales chỉ là giá đã gồm VAT). Có bảng giá niêm yết thì giảm giá được tính chính xác; có giá vốn thì công cụ chuyển sang phân tích lãi gộp.</p>
+   <div class="row"><button class="btn ghost sm" id="tplBtn">Tải file mẫu giá và giá vốn</button><button class="btn ghost sm" id="priceUp">Nhập file giá và giá vốn</button><button class="btn ghost sm" id="priceClr">Xóa bảng giá</button><input type="file" id="priceFile" accept=".xlsx" hidden></div>
+   <p class="hint" id="priceStat"></p>
+   <p class="eyebrow">Danh mục không tính là món (bao bì, phí giao)</p>
+   <input id="nonFood" style="width:100%">
+  </details>
+  <details class="card"><summary>Nhật ký sự kiện <small id="evHint"></small></summary>
+   <p class="hint" style="margin-top:0">Ghi lại mưa, lễ, khuyến mãi, đổi giá, thiếu nhân sự. Claude dùng các ghi chú này khi viết nhận xét.</p>
+   <div class="tw"><table><thead><tr><th class="l" style="width:150px">Ngày</th><th class="l">Sự kiện</th><th></th></tr></thead><tbody id="evTb"></tbody></table></div>
+   <button class="btn ghost sm" id="evAdd" style="margin-top:10px">+ Thêm sự kiện</button>
+  </details>
+  <details class="card"><summary>Claude viết nhận xét (tùy chọn)</summary>
+   <p class="hint" style="margin-top:0">Dán khóa API Anthropic của bạn để bật nút "Viết lại nhận xét bằng Claude" và ô hỏi đáp. Khóa chỉ lưu trong trình duyệt này và chỉ được gửi tới api.anthropic.com kèm bản tóm tắt số liệu. Không lưu khóa trên máy dùng chung.</p>
+   <div class="grid2"><label class="f">Khóa API<input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label><label class="f">Model<input id="apiModel" value="claude-sonnet-5-5"></label></div>
+   <div class="row" style="margin-top:10px"><button class="btn sm" id="apiSave">Lưu</button><button class="btn ghost sm" id="apiDel">Xóa khóa</button></div>
+   <p class="hint" id="apiStat"></p>
+  </details>
+ </div>
+</div></section>
+
+<!-- ============ PAGE 2: ANALYSIS ============ -->
+<section class="page" id="p2"><div class="wrap">
+ <div class="exec">
+  <div>
+   <div class="tag"><i>Δ</i><span id="execTag"></span></div>
+   <h2 id="execTitle"></h2>
+   <ul class="bl" id="execBul"></ul>
+   <div class="row" style="margin-top:14px"><button class="btn ghost sm" id="ai" hidden>Viết lại nhận xét bằng Claude</button><span class="hint" id="aiInfo"></span></div>
+   <div id="askbox" hidden><div class="askrow"><input id="q" placeholder="Hỏi thêm, ví dụ: vì sao TA giảm?" aria-label="Câu hỏi cho Claude"><button class="btn sm" id="ask">Hỏi</button></div><div id="ans"></div></div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+ </div>
+ <div class="card"><div class="eyebrow">Cây chỉ số: mỗi nhánh cộng lại đúng bằng nhánh cha. Bấm vào ô để xem công thức.</div><div id="tree"></div><div class="tf hint" id="treeF">Chọn một ô để xem công thức tính.</div></div>
+ <div id="notices"></div>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div class="card" id="panel"></div>
+</div></section>
+
+<!-- ============ PAGE 3: REPORT ============ -->
+<section class="page" id="p3"><div class="wrap">
+ <h1>Báo cáo cho cấp trên</h1>
+ <p class="sub">Bản 1 trang kèm phụ lục. Các ô trong bảng kế hoạch hành động sửa trực tiếp được và được nhớ trên trình duyệt này.</p>
+ <div class="rtools"><button class="btn" id="copySum">Copy tóm tắt</button><button class="btn ghost" id="pdf2">Xuất PDF</button><button class="btn ghost" id="printBtn">In</button><button class="btn ghost" id="xlsx2">Xuất Excel</button><button class="btn ghost" id="actAdd">+ Thêm hành động</button><button class="btn ghost" id="actReset">Gợi ý lại hành động</button></div>
+ <textarea class="sum" id="sumTxt" aria-label="Tóm tắt" readonly></textarea>
+ <div class="sheetwrap" style="margin-top:18px"><div id="sheets"></div></div>
+</div></section>
+
+<div class="run" id="runbar"><div class="wrap"><div class="in"><div class="st" id="runst"></div><button class="btn go" id="runBtn">Phân tích →</button></div></div></div>
+<footer class="wrap" style="position:relative;z-index:1;padding:10px max(3vw,16px) 120px;font-size:13px;color:var(--mut)">Restaurant Performance Report · dữ liệu chỉ xử lý trong trình duyệt · số liệu chưa gồm VAT</footer>
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" accept=".xlsx" multiple hidden>
+<script>/* Restaurant Performance Engine
+   - parse:     POS exports (Dish Sales, Order Type, Time Sales, Promotion) -> clean records
+   - aggregate: one period -> totals, channels, dayparts, hours, days, categories, dishes, promotions
+   - bridge:    period 0 -> period 1, three MECE levels + menu, every level sums exactly to delta
+   - insights:  English action titles, Vietnamese bullets, actions                                  */
+(function (root) {
+  'use strict';
+  var EPS = 1e-9;
+
+  /* ---------------- utils ---------------- */
+  function num(x) {
+    if (x === null || x === undefined || x === '') return null;
+    if (typeof x === 'number') return isFinite(x) ? x : null;
+    var s = String(x).trim().replace(/\s/g, '');
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');   // 1.234.567,8
+    else if (/^-?\d+,\d{1,2}$/.test(s)) s = s.replace(',', '.');   // 0,5 decimal comma; 1,234 stays thousands
+    else s = s.replace(/,/g, '');
+    var n = parseFloat(s);
+    return isFinite(n) ? n : null;
+  }
+  function nz(x) { var n = num(x); return n === null ? 0 : n; }
+  function txt(x) {
+    if (x === null || x === undefined) return '';
+    return String(x).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").trim();
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function day(x) {
+    if (x instanceof Date && !isNaN(x)) return x.getUTCFullYear() + '-' + pad(x.getUTCMonth() + 1) + '-' + pad(x.getUTCDate());
+    if (typeof x === 'number' && x > 30000 && x < 80000) { var d = new Date(Math.round((x - 25569) * 864e5)); return day(d); }   // Excel serial
+    var s = txt(x), m;
+    if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return m[1] + '-' + pad(+m[2]) + '-' + pad(+m[3]);
+    if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]);
+    return null;
+  }
+  function keys(o) { return Object.keys(o); }
+  function sum(a, f) { var s = 0; for (var i = 0; i < a.length; i++) s += f ? f(a[i]) : a[i]; return s; }
+  function div(a, b) { return Math.abs(b) > EPS ? a / b : 0; }
+
+  /* ---------------- report detection & parsing ---------------- */
+  var NONFOOD = ['TA Packaging', 'Packaging', 'Delivery Fee'];
+  var CHANNELS = { 'Dine In': 'Tại chỗ', 'Take Away': 'Mang đi', 'Now': 'ShopeeFood', 'Grab': 'GrabFood', 'XanhNgonSM': 'Xanh Ngon', 'Online': 'Giao hàng riêng', 'Call Center': 'Giao hàng riêng' };
+  var DAYPARTS = [{ name: 'Sáng', from: 6, to: 9 }, { name: 'Trưa', from: 10, to: 13 }, { name: 'Chiều', from: 14, to: 16 }, { name: 'Tối', from: 17, to: 23 }];
+  var REPORTS = {
+    dish: { name: 'Dish Sales', need: ['Check Number', 'Dish', 'Order Category', 'Quantity', 'Net Sales'] },
+    otype: { name: 'Order Type', need: ['Order Type', 'TC', 'Net Sales'], not: ['Dish', 'Hour'] },
+    time: { name: 'Time Sales', need: ['Hour', 'TC', 'Net Sales'] },
+    promo: { name: 'Promotion', need: ['Combo Dish', 'Quantity', 'Net Sales'] }
+  };
+  function norm(h) { return txt(h).toLowerCase().replace(/\s+/g, ' '); }
+  function detect(header) {
+    var H = header.map(norm);
+    function has(k) { return H.indexOf(norm(k)) >= 0; }
+    var order = ['dish', 'promo', 'time', 'otype'];
+    for (var i = 0; i < order.length; i++) {
+      var r = REPORTS[order[i]];
+      if (r.need.every(has) && !(r.not || []).some(has)) return order[i];
+    }
+    return null;
+  }
+  function isTotal(row) {
+    for (var i = 0; i < row.length; i++) { var v = row[i]; if (typeof v === 'string' && /subtotal|totals?\s*:/i.test(v)) return true; }
+    return false;
+  }
+  /* rows: arrays of raw cell values (row 0 = header). Returns {type, records, skipped, from, to} */
+  function parseSheet(rows) {
+    var hi = -1, type = null;
+    for (var i = 0; i < Math.min(rows.length, 15); i++) { type = detect((rows[i] || []).map(function (v) { return v == null ? '' : String(v); })); if (type) { hi = i; break; } }
+    if (!type) return { type: null, records: [], skipped: rows.length };
+    var H = rows[hi].map(norm), col = function (k) { return H.indexOf(norm(k)); };
+    var C = {}; ['Date', 'Category', 'Check Number', 'Dish', 'Order Category', 'Order Type', 'Guests', 'Quantity', 'Net Sales', 'Gross Sales', 'Gross sales', 'TC', 'Hour', 'Combo Dish', 'Restaurant'].forEach(function (k) { C[k] = col(k); });
+    if (C['Gross Sales'] < 0) C['Gross Sales'] = C['Gross sales'];
+    var out = [], skipped = 0, bad = 0, from = null, to = null, rest = {};
+    function g(r, k) { return C[k] >= 0 ? r[C[k]] : null; }
+    // an unreadable row that carries sales is lost data (warned); without sales it is a blank/footer line
+    function drop(r) { if (num(g(r, 'Net Sales')) !== null) bad++; else skipped++; }
+    for (var j = hi + 1; j < rows.length; j++) {
+      var r = rows[j] || [];
+      if (isTotal(r) || !r.some(function (v) { return v != null && String(v).trim() !== ''; })) { skipped++; continue; }
+      var d = day(g(r, 'Date'));
+      if (!d) { drop(r); continue; }
+      var rec;
+      if (type === 'dish') {
+        var chk = txt(g(r, 'Check Number'));   // text, so codes like A-0001 survive
+        if (!chk) { drop(r); continue; }
+        rec = { d: d, cat: txt(g(r, 'Category')), chk: chk, dish: txt(g(r, 'Dish')), oc: txt(g(r, 'Order Category')), ot: txt(g(r, 'Order Type')), g: nz(g(r, 'Guests')), q: nz(g(r, 'Quantity')), n: nz(g(r, 'Net Sales')), gr: nz(g(r, 'Gross Sales')) };
+      } else if (type === 'otype') {
+        rec = { d: d, ot: txt(g(r, 'Order Type')), n: nz(g(r, 'Net Sales')), gr: nz(g(r, 'Gross Sales')), tc: nz(g(r, 'TC')) };
+        if (!rec.ot) { drop(r); continue; }
+      } else if (type === 'time') {
+        var h = num(g(r, 'Hour')); if (h === null) { drop(r); continue; }
+        rec = { d: d, h: h, n: nz(g(r, 'Net Sales')), gr: nz(g(r, 'Gross Sales')), tc: nz(g(r, 'TC')) };
+      } else {
+        rec = { d: d, c: txt(g(r, 'Combo Dish')), q: nz(g(r, 'Quantity')), n: nz(g(r, 'Net Sales')), gr: nz(g(r, 'Gross Sales')) };
+      }
+      var rs = txt(g(r, 'Restaurant')); if (rs) rest[rs] = 1;
+      if (!from || d < from) from = d; if (!to || d > to) to = d;
+      out.push(rec);
+    }
+    return { type: type, records: out, skipped: skipped, bad: bad, from: from, to: to, restaurants: keys(rest) };
+  }
+
+  /* ---------------- aggregate one period ---------------- */
+  /* ds = {dish:[], otype:[], time:[], promo:[]}
+     cfg = {chanMap, nonFood:[], dayparts:[], prices:{dish:{list,vat}}, costs:{dish:unitCostNet}, comm:{channel:pct}, seats} */
+  function aggregate(ds, cfg) {
+    cfg = cfg || {};
+    var chanMap = cfg.chanMap || CHANNELS, nonFood = cfg.nonFood || NONFOOD, parts = cfg.dayparts || DAYPARTS;
+    var prices = cfg.prices || {}, costs = cfg.costs || {}, comm = cfg.comm || {};
+    var hasPrices = keys(prices).length > 0;
+    var A = { net: 0, gross: 0, tc: 0, items: 0, listNet: 0, disc: 0, food: 0, comm: 0, guestsDI: 0, tcDI: 0, netDI: 0,
+      ch: {}, dp: {}, hours: {}, daily: {}, cat: {}, dishes: {}, promo: {}, promoNet: 0, promoQty: 0,
+      dates: [], days: 0, unknownOC: {}, missingCost: {}, missingPrice: {}, discEst: !hasPrices, recon: [], hasDish: false };
+    var dish = ds.dish || [];
+    A.hasDish = dish.length > 0;
+    var checks = {}, dset = {}, est = {};
+    function isFood(c) { return nonFood.indexOf(c) < 0; }
+    // estimated list price (gross incl. VAT per unit) = highest unit price seen in the period
+    dish.forEach(function (r) {
+      if (r.q > 0 && r.gr > 0) { var u = r.gr / r.q; if (!est[r.dish] || u > est[r.dish]) est[r.dish] = u; }
+    });
+    dish.forEach(function (r) {
+      dset[r.d] = 1;
+      var oc = r.oc || r.ot || '(trống)', chn = chanMap[oc];
+      if (!chn) { A.unknownOC[oc] = (A.unknownOC[oc] || 0) + r.n; chn = oc; }
+      var ck = r.d + '|' + r.chk, c = checks[ck];
+      if (!c) c = checks[ck] = { ch: chn, g: 0, d: r.d };
+      if (r.g > c.g) c.g = r.g;
+      var food = isFood(r.cat);
+      // list value (net of VAT) before discounts
+      var vat = r.n > 0 && r.gr > 0 ? Math.round((r.gr / r.n - 1) * 100) / 100 : 0.08, list = r.n;
+      if (food && r.q > 0) {
+        var p = prices[r.dish];
+        if (p && p.list > 0) list = p.list / (1 + (p.vat != null ? p.vat / 100 : vat)) * r.q;
+        else if (hasPrices) { A.missingPrice[r.dish] = 1; if (est[r.dish]) list = est[r.dish] / (1 + vat) * r.q; }
+        else if (est[r.dish]) list = est[r.dish] / (1 + vat) * r.q;
+        if (list < r.n) list = r.n;   // never a negative discount from estimation noise
+      }
+      var uc = costs[r.dish], fc = 0;
+      if (food && r.q > 0) { if (uc != null) fc = uc * r.q; else if (keys(costs).length && r.n > 0) A.missingCost[r.dish] = 1; }
+      var cm = r.n * (nz(comm[chn]) / 100);
+      var S = A.ch[chn] || (A.ch[chn] = { tc: 0, net: 0, gross: 0, items: 0, listNet: 0, disc: 0, food: 0, comm: 0, guests: 0, _c: {} });
+      S.net += r.n; S.gross += r.gr; S.listNet += list; S.disc += list - r.n; S.food += fc; S.comm += cm;
+      if (food) S.items += r.q;
+      S._c[ck] = 1;
+      A.net += r.n; A.gross += r.gr; A.listNet += list; A.disc += list - r.n; A.food += fc; A.comm += cm; if (food) A.items += r.q;
+      var K = A.cat[r.cat] || (A.cat[r.cat] = { q: 0, n: 0, food: 0, nonFood: !food });
+      K.q += r.q; K.n += r.n; K.food += fc;
+      var D = A.dishes[r.dish] || (A.dishes[r.dish] = { cat: r.cat, q: 0, n: 0, food: 0, list: 0, nonFood: !food });
+      D.q += r.q; D.n += r.n; D.food += fc; D.list += list;
+      var dd = A.daily[r.d] || (A.daily[r.d] = { tc: 0, net: 0, _c: {} }); dd.net += r.n; dd._c[ck] = 1;
+    });
+    A.guests = 0;
+    keys(checks).forEach(function (k) { var c = checks[k]; A.tc++; A.guests += c.g; if (c.ch === (chanMap['Dine In'] || 'Tại chỗ')) { A.tcDI++; A.guestsDI += c.g; } });
+    keys(A.ch).forEach(function (k) { var S = A.ch[k]; S.tc = keys(S._c).length; delete S._c; });
+    keys(A.daily).forEach(function (k) { var d = A.daily[k]; d.tc = keys(d._c).length; delete d._c; });
+    A.netDI = A.ch[chanMap['Dine In'] || 'Tại chỗ'] ? A.ch[chanMap['Dine In'] || 'Tại chỗ'].net : 0;
+    // time sales -> hours & dayparts
+    var tNet = 0, tTc = 0;
+    (ds.time || []).forEach(function (r) {
+      dset[r.d] = 1; tNet += r.n; tTc += r.tc;
+      var H = A.hours[r.h] || (A.hours[r.h] = { tc: 0, net: 0 }); H.tc += r.tc; H.net += r.n;
+      var p = parts.filter(function (x) { return r.h >= x.from && r.h <= x.to; })[0], nm = p ? p.name : 'Khác';
+      var P = A.dp[nm] || (A.dp[nm] = { tc: 0, net: 0 }); P.tc += r.tc; P.net += r.n;
+    });
+    // order type report (reconciliation only)
+    var oNet = 0, oTc = 0, otype = {};
+    (ds.otype || []).forEach(function (r) { dset[r.d] = 1; oNet += r.n; oTc += r.tc; var o = otype[r.ot] || (otype[r.ot] = { tc: 0, net: 0 }); o.tc += r.tc; o.net += r.n; });
+    A.otype = otype;
+    // promotion
+    var pNet = 0;
+    (ds.promo || []).forEach(function (r) {
+      dset[r.d] = 1; pNet += r.n;
+      var nm = r.c || ''; if (!nm) return;
+      var P = A.promo[nm] || (A.promo[nm] = { q: 0, n: 0 }); P.q += r.q; P.n += r.n; A.promoNet += r.n; A.promoQty += r.q;
+    });
+    A.promoTotal = pNet;
+    A.hasTime = (ds.time || []).length > 0; A.hasOtype = (ds.otype || []).length > 0; A.hasPromo = (ds.promo || []).length > 0;
+    if (!A.hasDish) {   // fall back to the order-type or time report for totals
+      if (A.hasOtype) { A.net = oNet; A.tc = oTc; keys(otype).forEach(function (k) { A.ch[k] = { tc: otype[k].tc, net: otype[k].net, gross: 0, items: 0, listNet: otype[k].net, disc: 0, food: 0, comm: otype[k].net * nz(comm[k]) / 100, guests: 0 }; A.comm += A.ch[k].comm; }); }
+      else if (A.hasTime) { A.net = tNet; A.tc = tTc; }
+      A.listNet = A.net;
+    }
+    A.dates = keys(dset).sort(); A.days = A.dates.length;
+    if (cfg.daysOverride > 0) A.days = cfg.daysOverride;
+    // reconciliation against the primary source
+    function rec(name, has, n, tc) { if (!has) return; var dn = n - A.net, dt = tc === null ? 0 : tc - A.tc; A.recon.push({ report: name, net: n, tc: tc, dNet: dn, dTc: dt, ok: Math.abs(dn) <= 1000 && Math.abs(dt) < 0.5 }); }
+    if (A.hasDish) {
+      rec('Order Type', A.hasOtype, oNet, oTc);
+      rec('Time Sales', A.hasTime, tNet, tTc);
+      rec('Promotion', A.hasPromo, pNet, null);
+    }
+    A.cost = A.food + A.comm;
+    A.seats = nz(cfg.seats);
+    return A;
+  }
+
+  /* ---------------- KPIs ---------------- */
+  function kpis(A, profit) {
+    var di = A.ch['Tại chỗ'] || null, app = 0, appTc = 0;
+    keys(A.ch).forEach(function (k) { if (/shopee|grab|xanh|be$|baemin|gojek|app/i.test(k)) { app += A.ch[k].net; appTc += A.ch[k].tc; } });
+    return {
+      net: A.net, tc: A.tc, ta: div(A.net, A.tc), upt: div(A.items, A.tc), ip: div(A.net, A.items), ipList: div(A.listNet, A.items), guests: A.guests || 0,
+      tcDay: div(A.tc, A.days), netDay: div(A.net, A.days), days: A.days,
+      discPct: div(A.disc, A.listNet), appShare: div(app, A.net), appTcShare: div(appTc, A.tc),
+      promoShare: A.hasPromo ? div(A.promoNet, A.promoTotal || A.net) : null,
+      taDI: di ? div(di.net, di.tc) : null, spendHead: A.guestsDI ? div(A.netDI, A.guestsDI) : null, guestsPerBill: A.tcDI ? div(A.guestsDI, A.tcDI) : null,
+      foodPct: A.food ? div(A.food, A.net) : null, commPct: A.comm ? div(A.comm, A.net) : null,
+      gm: profit ? A.net - A.cost : null, gmPct: profit ? div(A.net - A.cost, A.net) : null,
+      seatDay: A.seats ? div(A.net, A.seats * A.days) : null, turnover: A.seats && A.guestsDI ? div(A.guestsDI, A.seats * A.days) : null
+    };
+  }
+
+  /* ---------------- bridge core ---------------- */
+  /* seg = {tc, net, cost, food, comm, items, listNet}; returns per-segment effects + totals.
+     W = TA0 (revenue) or TA0 - CPB0 (profit). Traffic + Mix + Check + Cost = M1 - M0 exactly. */
+  function seg(o) { o = o || {}; return { tc: nz(o.tc), net: nz(o.net), food: nz(o.food), comm: nz(o.comm), items: nz(o.items), listNet: nz(o.listNet) || nz(o.net) }; }
+  function bridge(S0, S1, profit) {
+    var ks = keys(S0).concat(keys(S1).filter(function (k) { return !(k in S0); }));
+    var TC0 = 0, TC1 = 0;
+    ks.forEach(function (k) { TC0 += seg(S0[k]).tc; TC1 += seg(S1[k]).tc; });
+    var r = div(TC1, TC0), rows = [], T = { m0: 0, m1: 0, traffic: 0, mix: 0, check: 0, upt: 0, price: 0, disc: 0, cost: 0, food: 0, comm: 0 };
+    ks.forEach(function (k) {
+      var a = seg(S0[k]), b = seg(S1[k]);
+      var c0 = profit ? a.food + a.comm : 0, c1 = profit ? b.food + b.comm : 0;
+      var m0 = a.net - c0, m1 = b.net - c1;
+      var o = { key: k, tc0: a.tc, tc1: b.tc, net0: a.net, net1: b.net, m0: m0, m1: m1, delta: m1 - m0,
+        ta0: div(a.net, a.tc), ta1: div(b.net, b.tc), traffic: 0, mix: 0, check: 0, upt: 0, price: 0, disc: 0, cost: 0, food: 0, comm: 0, flag: '' };
+      if (a.tc <= EPS && b.tc > EPS) { o.flag = 'new'; o.mix = m1; }
+      else if (b.tc <= EPS && a.tc > EPS) { o.flag = 'lost'; var W0 = div(m0, a.tc), tm = a.tc * r; o.traffic = (tm - a.tc) * W0; o.mix = (0 - tm) * W0; }
+      else if (a.tc > EPS) {
+        var W = div(m0, a.tc), tcm = a.tc * r;
+        o.traffic = (tcm - a.tc) * W; o.mix = (b.tc - tcm) * W;
+        o.check = (o.ta1 - o.ta0) * b.tc;
+        if (a.items > EPS && b.items > EPS && a.listNet > EPS && b.listNet > EPS) {
+          var U0 = a.items / a.tc, U1 = b.items / b.tc, I0 = a.listNet / a.items, I1 = b.listNet / b.items, k0 = a.net / a.listNet, k1 = b.net / b.listNet;
+          o.upt = b.tc * (U1 - U0) * I0 * k0; o.price = b.tc * U1 * (I1 - I0) * k0; o.disc = b.tc * U1 * I1 * (k1 - k0);
+        } else o.price = o.check;
+        if (profit) { o.food = -(div(b.food, b.tc) - div(a.food, a.tc)) * b.tc; o.comm = -(div(b.comm, b.tc) - div(a.comm, a.tc)) * b.tc; o.cost = o.food + o.comm; }
+      }
+      rows.push(o);
+      ['m0', 'm1', 'traffic', 'mix', 'check', 'upt', 'price', 'disc', 'cost', 'food', 'comm'].forEach(function (f) { T[f] += o[f]; });
+    });
+    T.delta = T.m1 - T.m0; T.tc0 = TC0; T.tc1 = TC1; T.r = r;
+    T.check_ = T.traffic + T.mix + T.check + T.cost - T.delta;
+    T.split_ = T.upt + T.price + T.disc - T.check;
+    return { rows: rows, T: T };
+  }
+
+  /* ---------------- full analysis ---------------- */
+  function analyze(A0, A1, opts) {
+    opts = opts || {};
+    var profit = !!opts.profit;
+    var tot = function (A) { return { tc: A.tc, net: A.net, food: A.food, comm: A.comm, items: A.items, listNet: A.listNet }; };
+    var L1 = bridge({ all: tot(A0) }, { all: tot(A1) }, profit).T;
+    var L2 = bridge(A0.ch, A1.ch, profit);
+    // daypart: costs allocated by sales share inside each period
+    function dpSeg(A) {
+      var o = {}; keys(A.dp).forEach(function (k) { var s = A.dp[k], sh = div(s.net, A.net); o[k] = { tc: s.tc, net: s.net, food: A.food * sh, comm: A.comm * sh }; }); return o;
+    }
+    var L2dp = A0.hasTime && A1.hasTime ? bridge(dpSeg(A0), dpSeg(A1), profit) : null;
+    // level 3: traffic -> trading days + productivity
+    var W = div(L1.m0, A0.tc), g = div(A1.days, A0.days), r = div(A1.tc, A0.tc);
+    var L3 = { days: (g - 1) * A0.tc * W, prod: (r - g) * A0.tc * W, g: g, r: r, W: W };
+    L3.check_ = L3.days + L3.prod - L1.traffic;
+    // menu (dish grain, pool = category), revenue or food margin
+    var M = menuBridge(A0, A1, profit);
+    var checks = { l1: L1.check_, l2: L2.T.check_, l2split: L2.T.split_, l3: L3.check_, l2traffic: L2.T.traffic - L1.traffic };
+    var scale = Math.max(1, Math.abs(L1.m0), Math.abs(L1.m1));
+    var ok = keys(checks).every(function (k) { return Math.abs(checks[k]) <= 1e-7 * scale; });
+    return { profit: profit, L1: L1, L2: L2, L2dp: L2dp, L3: L3, menu: M, checks: checks, ok: ok, k0: kpis(A0, profit), k1: kpis(A1, profit) };
+  }
+
+  function menuBridge(A0, A1, profit) {
+    var D0 = A0.dishes, D1 = A1.dishes, names = keys(D0).concat(keys(D1).filter(function (k) { return !(k in D0); }));
+    var pools = {};
+    names.forEach(function (n) {
+      var a = D0[n] || { q: 0, n: 0, food: 0, cat: (D1[n] || {}).cat }, b = D1[n] || { q: 0, n: 0, food: 0, cat: a.cat };
+      var cat = b.cat || a.cat || '(khác)', P = pools[cat] || (pools[cat] = { cat: cat, items: [], S0: 0, S1: 0 });
+      P.items.push({ name: n, cat: cat, q0: a.q, q1: b.q, n0: a.n, n1: b.n, f0: profit ? a.food : 0, f1: profit ? b.food : 0, nonFood: (D1[n] || D0[n]).nonFood });
+      P.S0 += a.q; P.S1 += b.q;
+    });
+    var T = { m0: 0, m1: 0, vol: 0, mix: 0, price: 0, cost: 0 }, cats = [], dishes = [];
+    keys(pools).forEach(function (k) {
+      var P = pools[k], rr = div(P.S1, P.S0), C = { cat: k, m0: 0, m1: 0, vol: 0, mix: 0, price: 0, cost: 0, q0: P.S0, q1: P.S1 };
+      P.items.forEach(function (it) {
+        var p0 = div(it.n0, it.q0), p1 = div(it.n1, it.q1), u0 = div(it.f0, it.q0), u1 = div(it.f1, it.q1);
+        if (it.q0 <= EPS) { p0 = p1; u0 = u1; }
+        var w = p0 - u0, qm = it.q0 * rr;
+        if (P.S0 <= EPS) qm = 0;
+        it.m0 = it.n0 - it.f0; it.m1 = it.n1 - it.f1; it.delta = it.m1 - it.m0;
+        it.vol = (qm - it.q0) * w; it.mix = (it.q1 - qm) * w; it.price = (p1 - p0) * it.q1; it.cost = -(u1 - u0) * it.q1;
+        if (it.q0 <= EPS && it.q1 <= EPS) { it.vol = 0; it.mix = 0; it.price = it.delta; it.cost = 0; }   // zero-qty adjustments
+        it.adj = it.delta - (it.vol + it.mix + it.price + it.cost); it.price += it.adj;
+        ['m0', 'm1', 'vol', 'mix', 'price', 'cost'].forEach(function (f) { C[f] += it[f]; T[f] += it[f]; });
+        dishes.push(it);
+      });
+      C.delta = C.m1 - C.m0; cats.push(C);
+    });
+    T.delta = T.m1 - T.m0;
+    // menu engineering on the current period, food items only
+    var food = keys(D1).filter(function (n) { return !D1[n].nonFood && D1[n].q > 0; }).map(function (n) { var d = D1[n]; return { name: n, cat: d.cat, q: d.q, n: d.n, p: d.n / d.q, m: (d.n - (profit ? d.food : 0)) / d.q }; });
+    var Q = sum(food, function (x) { return x.q; }), N = food.length, popT = N ? 0.7 / N : 0, avgM = Q ? sum(food, function (x) { return x.m * x.q; }) / Q : 0;
+    food.forEach(function (x) { x.share = x.q / Q; var hp = x.share >= popT, hm = x.m >= avgM; x.quad = hp && hm ? 'Star' : hp ? 'Plowhorse' : hm ? 'Puzzle' : 'Dog'; });
+    return { T: T, cats: cats, dishes: dishes, eng: { items: food, popT: popT, avgM: avgM, byMargin: profit } };
+  }
+
+  /* ---------------- formatting ---------------- */
+  var nf0 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }), nf1 = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), nf2 = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function money(x) {   // short VND: 27,3 tr / 1,25 tỷ / 850k
+    var a = Math.abs(x), s = x < 0 ? '−' : '';
+    if (a >= 1e9) return s + nf2.format(a / 1e9) + ' tỷ';
+    if (a >= 1e6) return s + nf1.format(a / 1e6) + ' tr';
+    if (a >= 1e3) return s + nf0.format(a / 1e3) + 'k';
+    return s + nf0.format(a);
+  }
+  function sMoney(x) { return (x > 0 ? '+' : x < 0 ? '' : '±') + money(x); }
+  function full(x) { return (x < 0 ? '−' : '') + nf0.format(Math.abs(x)); }
+  function pct(x, d) { return (x < 0 ? '−' : '') + (d === 0 ? nf0 : nf1).format(Math.abs(x * 100)) + '%'; }
+  function sPct(x) { return (x > 0 ? '+' : '') + pct(x); }
+  function pp(a, b) { var d = (b - a) * 100; return (d > 0 ? '+' : d < 0 ? '−' : '±') + nf1.format(Math.abs(d)) + ' điểm %'; }
+  function n1(x) { return nf1.format(x); }
+  function n0(x) { return nf0.format(x); }
+
+  /* ---------------- insights ---------------- */
+  var EN = {
+    traffic: ['more bills', 'fewer bills'], mix: ['a richer channel mix', 'a shift toward lower-value channels'], upt: ['more items per bill', 'fewer items per bill'],
+    price: ['higher prices per item', 'lower prices per item'], disc: ['lighter discounting', 'deeper discounts'], food: ['lower food cost', 'higher food cost'], comm: ['lower app commissions', 'higher app commissions']
+  };
+  var VN = { traffic: 'Số bill', mix: 'Cơ cấu kênh', upt: 'Số món/bill', price: 'Giá TB/món', disc: 'Giảm giá', food: 'Giá vốn NVL', comm: 'Hoa hồng app', days: 'Số ngày mở cửa', prod: 'Bill/ngày' };
+  function drivers(R) {
+    var T = R.L2.T, d = [['traffic', T.traffic], ['mix', T.mix], ['upt', T.upt], ['price', T.price], ['disc', T.disc]];
+    if (R.profit) d.push(['food', T.food], ['comm', T.comm]);
+    return d.filter(function (x) { return Math.abs(x[1]) > 1; }).sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); });
+  }
+  function insights(R, A0, A1, L, plan) {
+    var k0 = R.k0, k1 = R.k1, T1 = R.L1, up = T1.delta >= 0, metric = R.profit ? 'Gross profit' : 'Net sales', mVN = R.profit ? 'Lãi gộp' : 'Doanh thu thuần';
+    var dPct = div(T1.delta, Math.abs(T1.m0)), dv = drivers(R), pos = dv.filter(function (x) { return x[1] > 0; }), neg = dv.filter(function (x) { return x[1] < 0; });
+    var lead = up ? pos[0] : neg[0], off = up ? neg[0] : pos[0];
+    var flat = Math.abs(dPct) < 0.0005, title = metric + (flat ? ' flat' : ' ' + (up ? 'up ' : 'down ') + n1(Math.abs(dPct * 100)).replace(',', '.') + '%') + ' vs ' + L.p0;
+    if (lead) title += (up ? ' on ' : ' as ') + EN[lead[0]][lead[1] > 0 ? 0 : 1];
+    if (off && Math.abs(off[1]) > 0.15 * Math.abs(T1.delta)) title += ', ' + (up ? 'partly offset by ' : 'despite ') + EN[off[0]][off[1] > 0 ? 0 : 1];
+    var why = {
+      traffic: function (v) { return 'Số bill ' + (A1.tc >= A0.tc ? 'tăng ' : 'giảm ') + n0(Math.abs(A1.tc - A0.tc)) + ' (' + sPct(div(A1.tc - A0.tc, A0.tc)) + '), bill/ngày ' + n1(k0.tcDay) + ' → ' + n1(k1.tcDay) + ', tác động **' + sMoney(v) + '**.'; },
+      mix: function (v) { return 'Tỷ trọng bill qua app ' + pct(k0.appTcShare) + ' → ' + pct(k1.appTcShare) + '; bill app có giá trị thấp hơn tại chỗ nên cơ cấu tác động **' + sMoney(v) + '**.'; },
+      upt: function (v) { return 'Số món/bill ' + nf2.format(k0.upt) + ' → ' + nf2.format(k1.upt) + ', tác động **' + sMoney(v) + '**.'; },
+      price: function (v) { return 'Giá TB/món trước giảm giá ' + money(k0.ipList) + ' → ' + money(k1.ipList) + ' (' + sPct(div(k1.ipList - k0.ipList, k0.ipList)) + '), tác động **' + sMoney(v) + '**.'; },
+      disc: function (v) { return 'Tỷ lệ giảm giá ' + pct(k0.discPct) + ' → ' + pct(k1.discPct) + (A1.discEst ? ' (ước tính)' : '') + ', tác động **' + sMoney(v) + '**.'; },
+      food: function (v) { return 'Food cost ' + pct(k0.foodPct || 0) + ' → ' + pct(k1.foodPct || 0) + ' doanh thu, tác động **' + sMoney(v) + '**.'; },
+      comm: function (v) { return 'Hoa hồng app ' + pct(k0.commPct || 0) + ' → ' + pct(k1.commPct || 0) + ' doanh thu, tác động **' + sMoney(v) + '**.'; }
+    };
+    var bullets = [{ h: 'Kết quả', t: mVN + ' ' + L.p1 + ' đạt **' + money(T1.m1) + '**, ' + (up ? 'tăng ' : 'giảm ') + '**' + money(Math.abs(T1.delta)) + '** (' + sPct(dPct) + ') so với ' + L.p0 + '; ' + n0(A1.tc) + ' bill, TA ' + money(k1.ta) + ' (' + sPct(div(k1.ta - k0.ta, k0.ta)) + ').' + (plan && plan.net ? ' Đạt **' + pct(div(A1.net, plan.net)) + '** kế hoạch doanh thu.' : '') }];
+    if (lead) bullets.push({ h: 'Động lực chính: ' + VN[lead[0]], t: why[lead[0]](lead[1]) });
+    if (off) bullets.push({ h: (off[1] < 0 ? 'Kéo lùi: ' : 'Hỗ trợ: ') + VN[off[0]], t: why[off[0]](off[1]) });
+    else if (dv[1]) bullets.push({ h: VN[dv[1][0]], t: why[dv[1][0]](dv[1][1]) });
+    // level texts
+    var lv = {};
+    var T2 = R.L2.T, ch = R.L2.rows.slice().sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
+    lv[1] = { title: (R.profit ? 'Profit' : 'Sales') + ' moved ' + sMoney(T1.delta).replace('−', '-') + ': ' + (Math.abs(T1.traffic) >= Math.abs(T1.check) ? 'traffic' : 'average check') + ' explains most of it',
+      bullets: [
+        { h: 'Traffic', t: why.traffic(T1.traffic) },
+        { h: 'Average check', t: 'TA ' + money(k0.ta) + ' → ' + money(k1.ta) + ' (' + sPct(div(k1.ta - k0.ta, k0.ta)) + '), tác động **' + sMoney(T1.check) + '**: số món/bill **' + sMoney(T1.upt) + '**, giá/món **' + sMoney(T1.price) + '**, giảm giá **' + sMoney(T1.disc) + '**.' }
+      ].concat(R.profit ? [{ h: 'Chi phí', t: 'Giá vốn **' + sMoney(T1.food) + '**, hoa hồng app **' + sMoney(T1.comm) + '**.' }] : []) };
+    var shiftTxt = ch.slice(0, 3).map(function (x) { return x.key + ' ' + sMoney(x.delta); }).join(', ');
+    lv[2] = { title: Math.abs(T2.mix) > Math.abs(T2.check) ? 'Channel mix ' + (T2.mix >= 0 ? 'lifted' : 'diluted') + ' the average check' : 'Same-channel check ' + (T2.check >= 0 ? 'rose' : 'fell') + ' more than mix moved',
+      bullets: [
+        { h: 'Kênh biến động nhất', t: shiftTxt + '.' },
+        { h: 'Cơ cấu kênh', t: why.mix(T2.mix) },
+        { h: 'Giá trị bill cùng kênh', t: 'Khi giữ nguyên cơ cấu, TA từng kênh thay đổi tác động **' + sMoney(T2.check) + '** (số món ' + sMoney(T2.upt) + ', giá ' + sMoney(T2.price) + ', giảm giá ' + sMoney(T2.disc) + ').' }
+      ] };
+    var L3 = R.L3;
+    lv[3] = { title: Math.abs(L3.days) > Math.abs(L3.prod) ? 'Trading days drove traffic' : 'Bills per day ' + (L3.prod >= 0 ? 'improved' : 'declined') + ' on a like-for-like basis',
+      bullets: [
+        { h: 'Số ngày mở cửa', t: A0.days + ' → ' + A1.days + ' ngày, tác động **' + sMoney(L3.days) + '**.' },
+        { h: 'Năng suất', t: 'Bill/ngày ' + n1(k0.tcDay) + ' → ' + n1(k1.tcDay) + ' (' + sPct(div(k1.tcDay - k0.tcDay, k0.tcDay)) + '), tác động **' + sMoney(L3.prod) + '**.' }
+      ].concat(k1.turnover != null ? [{ h: 'Công suất ghế', t: 'Vòng quay ghế ' + (k0.turnover != null ? nf2.format(k0.turnover) + ' → ' : '') + nf2.format(k1.turnover) + ' lượt/ghế/ngày; ' + (k1.guestsPerBill ? nf2.format(k1.guestsPerBill) + ' khách/bill tại chỗ.' : '') }] : []) };
+    // actions
+    var acts = [];
+    function act(lvl, s, v) { acts.push({ lv: lvl, t: s, v: v || 0 }); }
+    if (T2.disc < 0 || (k1.discPct > k0.discPct + 0.01)) act(1, 'Rà soát khuyến mãi (đặc biệt combo SPF_ trên ShopeeFood): tỷ lệ giảm giá ' + pct(k0.discPct) + ' → ' + pct(k1.discPct) + '; đặt trần giảm giá theo kênh.', T2.disc);
+    if (T1.upt < 0) act(1, 'Đẩy bán kèm đồ uống, khai vị tại bàn; mục tiêu số món/bill quay lại ' + nf2.format(k0.upt) + '.', T1.upt);
+    if (T2.mix < 0) act(2, 'Kéo khách về kênh tại chỗ và mang đi tự đến (ưu đãi đặt trực tiếp) vì bill app thấp hơn và mất hoa hồng.', T2.mix);
+    if (R.profit && T1.comm < 0) act(2, 'Đàm phán hoa hồng hoặc chuyển bớt đơn sang kênh giao hàng riêng (Online, Call Center).', T1.comm);
+    if (R.profit && T1.food < 0) act(1, 'Kiểm tra định lượng và hao hụt các nhóm món có food cost tăng.', T1.food);
+    if (L3.prod < 0) {
+      var worst = R.L2dp ? R.L2dp.rows.slice().sort(function (a, b) { return a.delta - b.delta; })[0] : null;
+      act(3, 'Tăng lượt khách ' + (worst ? 'khung ' + worst.key.toLowerCase() + ' (giảm ' + money(Math.abs(worst.delta)) + ')' : 'khung giờ thấp điểm') + ' bằng combo theo khung giờ, đẩy đặt bàn nhóm.', L3.prod);
+    }
+    if (T1.traffic > 0 && T1.check < 0) act(1, 'Giữ đà tăng lượt khách nhưng thiết kế khuyến mãi theo giá trị bill tối thiểu để không kéo TA xuống.', T1.check);
+    if (!acts.length) act(1, 'Duy trì các yếu tố đang hiệu quả; theo dõi TA và tỷ lệ giảm giá hằng tuần.');
+    lv[1].actions = acts.filter(function (a) { return a.lv === 1; }).map(function (a) { return a.t; });
+    lv[2].actions = acts.filter(function (a) { return a.lv === 2; }).map(function (a) { return a.t; });
+    lv[3].actions = acts.filter(function (a) { return a.lv === 3; }).map(function (a) { return a.t; });
+    return { title: title, bullets: bullets, lv: lv, actions: acts.map(function (a) { return a.t; }), acts: acts, drivers: dv, why: why };
+  }
+
+  var api = { num: num, txt: txt, day: day, detect: detect, parseSheet: parseSheet, aggregate: aggregate, analyze: analyze, bridge: bridge, kpis: kpis, insights: insights, drivers: drivers,
+    money: money, sMoney: sMoney, full: full, pct: pct, sPct: sPct, pp: pp, n1: n1, n0: n0, nf2: nf2, div: div,
+    NONFOOD: NONFOOD, CHANNELS: CHANNELS, DAYPARTS: DAYPARTS, REPORTS: REPORTS, VN: VN };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RE = api;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>/* Sample data: two simulated months in the exact POS export layout (Dish Sales, Order Type, Time Sales, Promotion).
+   Menu, categories and list prices come from one real day of the restaurant; volumes, discounts and costs are simulated. */
+(function (root) {
+  'use strict';
+  var MENU = [["BAKED MACARONI","H & M w/ Cream Sauce Macaroni",109000,8,3],["BAKED MACARONI","Seafood w/ Sweet & Sour Sauce Macaroni",109000,8,1],["Baked","Bread Sticks /w Dipping Sauce",35000,8,1],["Baked","Cheese Bread Twists",75000,8,2],["Baked","Garlic Bread",60000,8,1],["Baked","Quesadilla",149000,8,2],["Beer & Alcohol","333 Beer",50000,10,1],["Beer & Alcohol","Heineken",50000,10,2],["CSD","7-Up-Can",30000,10,2],["CSD","Lemon Yuzu Oolong TEA + ( Bottle )",20000,8,1],["CSD","Mirinda Soda Kem-Can",30000,10,2],["CSD","Pepsi Black Lime-Can",30000,8,3],["CSD","Pepsi Black-Can",30000,8,5],["CSD","Pepsi-1.5l PET",45000,10,3],["CSD","Pepsi-Can",30000,10,10],["Chicken","BBQ Chicken Platter (9pcs)",279000,8,1],["Chicken","BBQ Chicken Wings (6 pcs)",155000,8,1],["Chicken","Chicken Popcorn",107000,8,3],["Chicken","Chicken Strip",63000,8,4],["Chicken","Crispy CK_K-Sauce(2pcs)",135000,8,1],["Chicken","Crispy Chicken Skin_ K Sauce",77000,8,1],["Chicken","Crispy chicken_Onion cream sauce (2pcs)",135000,8,1],["Chicken","Crispy chicken_Onion cream sauce (5pcs)",275000,8,2],["Chicken","CrispyCK_Garlic Butter -Sauce ( 2pcs)",135000,8,1],["Chicken","CrispyCK_Garlic Butter -Sauce ( 5pcs)",232000,8,2],["Chicken","Korean Style Chicken Wings (10pcs)",215000,8,3],["Chicken","Korean Style Chicken Wings (6pcs)",155000,8,2],["Chicken","Trio Chicken Platter_S&G Sauce",155000,8,1],["Delivery Fee","Phí Giao Hàng",25000,8,2],["Fresh Juice","Curcumber Lemon Juice",70000,8,1],["Fresh Juice","Watermelon Juice",70000,8,1],["Fried","French Fries",109000,8,3],["Fried","Potato Basket",90000,8,5],["Fried","Squid Rings",135000,8,3],["LTO Pasta","Pasta BBQ Chicken & Cashews Creamy Sauce",87000,8,1],["LTO Pizza","Pizza Croissant Garlic CK & Cashews",275000,8,2],["LTO Pizza","Pizza Croissant Ham Bacon & Cashews",235000,8,1],["LTO Pizza","Pizza Croissant Seafood Pesto",295000,8,3],["LTO Pizza","Pizza Croissant Tropical Seafood",285000,8,5],["Mineral Water","Aquafina",30000,8,7],["Mocktail","Blueberry Mocktail",70000,8,2],["Mocktail","Lemon Lime Soda",70000,8,2],["Mocktail","Lipton Mojito Tea - Pitcher",160000,8,3],["Mocktail","Lipton Watermelon Tea - Pitcher",160000,8,3],["Mocktail","Lychee Watermelon",70000,8,1],["Mocktail","Sparkling Lychee Lemon",70000,8,3],["Mocktail","Strawberry Mocktail",70000,8,1],["Packaging","Khan lanh",3000,8,12],["Pasta","Pasta Seafood w/ Pesto Sauce",155000,8,2],["Pasta","Seafood Pasta w Lime Creamy Sauce",127000,8,1],["Pasta","Spaghetti Bolognese",148000,8,8],["Pasta","Spaghetti Ham & Mushroom",140000,8,8],["Pasta","Spaghetti Shrimp Rose",145000,8,2],["Pasta","Spaghetti Spicy Seafood",146000,8,3],["Pasta","Spaghetti Vegetarian /w Marinara Sauce",135000,8,2],["Pizza Classic","Ck Caldo-P-M",223000,8,1],["Pizza Classic","Ck Caldo-P-S",89000,8,1],["Pizza Classic","Double Cheese-CT-M",187000,8,1],["Pizza Classic","Double Cheese-P-M",225000,8,1],["Pizza Classic","Double Cheese-P-S",80000,8,1],["Pizza Classic","Double Pepperoni-P-M",225000,8,1],["Pizza Classic","Double Pepperoni-P-S",89000,8,3],["Pizza Classic","Hawaii-CT-M",225000,8,2],["Pizza Classic","Hawaii-P-S",155000,8,1],["Pizza Classic","Veg-P-M",225000,8,2],["Pizza Classic","Veg-P-S",145000,8,3],["Pizza Deluxe","Aloha-CC-M",131000,8,1],["Pizza Deluxe","Bacon Sup-P-M",248000,8,1],["Pizza Deluxe","Ca Bacon-P-M",245000,8,1],["Pizza Deluxe","Ck Trio-P-S",18000,8,1],["Pizza Deluxe","Meat Deluxe-P-M",245000,8,2],["Pizza Deluxe","Sup Deluxe-P-S",165000,8,3],["Pizza Gourmet","Four Cheese Coconut Pizza-P-S",177000,8,1],["Pizza Gourmet","Seafood Pesto-P-L",365000,8,3],["Pizza Gourmet","Seafood Pesto-P-M",265000,8,6],["Pizza Gourmet","Seafood Pesto-P-S",194000,8,8],["Pizza Gourmet","Sf Cocktail-P-M",255000,8,1],["Pizza Gourmet","Sf Deluxe-P-M",184000,8,1],["Pizza Gourmet","Sf Deluxe-P-S",89000,8,7],["Pizza Gourmet","Sf Pesto Full Topping-CC-M",297000,8,1],["Pizza Gourmet","Sf Pesto Full Topping-CT-L",395000,8,2],["Pizza Gourmet","Sf Pesto Full Topping-CT-M",224000,8,1],["Pizza Gourmet","Sf Pesto Full Topping-P-M",285000,8,2],["Pizza Gourmet","Sf Pesto Full Topping-P-S",229000,8,2],["Pizza Gourmet","Shrimp Ctl-P-L",143000,8,1],["Pizza Gourmet","Shrimp Ctl-P-M",255000,8,2],["Pizza Gourmet","Tropical Sf-2C-M",355000,8,1],["Pizza Gourmet","Tropical Sf-CT-M",218000,8,1],["Pizza Gourmet","Tropical Sf-P-L",375000,8,1],["Pizza Gourmet","Tropical Sf-P-M",173000,8,2],["Pizza Gourmet","Tropical Sf-P-S",89000,8,1],["Platter","Platter - BBQ",133000,8,1],["Platter","Platter - CCW",185000,8,1],["Platter","Spicy Garlic Shrimp with Bread",135000,8,3],["Pork","Junior Star (5 pcs)",345000,8,1],["Salad","Caesar's Salad-M",95000,8,3],["Salad","Chicken Strip Salad-M",105000,8,3],["Salad","Garden Salad-M",95000,8,1],["Salad","Shrimp Salad w Lime Creamy Dressing-L",190000,8,2],["Salad","Shrimp Salad w Lime Creamy Dressing-M",105000,8,2],["Salad","Signature Salad-M",95000,8,2],["TA Packaging","Take away 10 Pcs CCW Chik",0,8,3],["TA Packaging","Take away 5 pcs Korean chicken",0,8,2],["TA Packaging","Take away Bread Stick",0,8,1],["TA Packaging","Take away Cheese Bread Twists",0,8,1],["TA Packaging","Take away F/F",0,8,3],["TA Packaging","Take away Pasta",0,8,14],["TA Packaging","Take away Pizza L",0,8,10],["TA Packaging","Take away Pizza M",0,8,11],["TA Packaging","Take away Pizza S",0,8,28],["TA Packaging","Take away Potato Basket",0,8,2],["TA Packaging","Take away Salad L",0,8,2],["TA Packaging","Take away Salad M",0,8,2],["TA Packaging","Take away Squid Rings",0,8,2],["Tea","Lipton Tea - Glass",30000,10,3]];
+  function rng(seed) { var s = seed >>> 0; return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function pois(R, l) { var L = Math.exp(-l), k = 0, p = 1; do { k++; p *= R(); } while (p > L); return k - 1; }
+  function pick(R, arr, w) { var t = 0, i; for (i = 0; i < w.length; i++) t += w[i]; var x = R() * t; for (i = 0; i < arr.length; i++) { x -= w[i]; if (x <= 0) return arr[i]; } return arr[arr.length - 1]; }
+  var OT = { 'Dine In': ['Dine In', 'Dine In'], 'Now': ['Take Away', 'Aggregator'], 'Grab': ['Take Away', 'Aggregator'], 'XanhNgonSM': ['Take Away', 'Take Away - Customer'], 'Take Away': ['Take Away', 'Take Away - Customer'], 'Online': ['Delivery', 'Delivery'], 'Call Center': ['Delivery', 'Delivery'] };
+  var DRINK = /CSD|Mocktail|Mineral|Tea|Juice|Beer/i, PIZZA = /Pizza/i;
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function month(y, m, days, sc, seed) {
+    var R = rng(seed), food = MENU.filter(function (x) { return x[2] > 0 && !/Packaging|Delivery Fee/.test(x[0]); });
+    var drinks = food.filter(function (x) { return DRINK.test(x[0]); }), mains = food.filter(function (x) { return !DRINK.test(x[0]); });
+    var wM = mains.map(function (x) { return x[4] + 0.6; }), wD = drinks.map(function (x) { return x[4] + 0.6; });
+    var dish = [], chk = 1200000 + seed % 1000 * 1000, perHour = {}, perOT = {}, perPromo = {};
+    for (var d = 1; d <= days; d++) {
+      var date = y + '-' + pad(m) + '-' + pad(d), wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay(), we = wd === 0 || wd === 6 ? 1.45 : 1;
+      if (sc.closed && sc.closed.indexOf(d) >= 0) continue;
+      var rain = sc.rain && sc.rain.indexOf(d) >= 0 ? 0.72 : 1;
+      var lam = { 'Dine In': sc.di * we * rain, 'Now': sc.spf * (rain < 1 ? 1.25 : 1) * (we > 1 ? 1.15 : 1), 'Grab': sc.grab, 'XanhNgonSM': sc.xanh, 'Take Away': sc.ta * we, 'Online': 0.8, 'Call Center': 0.6 };
+      Object.keys(lam).forEach(function (oc) {
+        var n = pois(R, lam[oc]);
+        for (var c = 0; c < n; c++) {
+          chk++;
+          var hour = oc === 'Dine In' ? pick(R, [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], [3, 7, 4, 2, 1.5, 1.5, 4, 11, 12, 8, 4]) : pick(R, [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], [2, 5, 3, 3, 3, 3, 4, 7, 8, 6, 4]);
+          var guests = oc === 'Dine In' ? 1 + pois(R, 1.8) : 1;
+          var nMain = oc === 'Dine In' ? Math.max(1, Math.round(guests * sc.uptDI * (0.6 + R() * 0.8))) : Math.max(1, Math.round(sc.uptApp * (0.5 + R())));
+          var nDrink = oc === 'Dine In' ? Math.round(guests * sc.drinkDI * R() * 1.6) : (R() < 0.35 ? 1 : 0);
+          var lines = [];
+          for (var i = 0; i < nMain; i++) lines.push(pick(R, mains, wM));
+          for (i = 0; i < nDrink; i++) lines.push(pick(R, drinks, wD));
+          var app = oc === 'Now' || oc === 'Grab' || oc === 'XanhNgonSM', discP = oc === 'Now' ? sc.discSpf : app ? 0.3 : oc === 'Dine In' ? 0.06 : 0.12;
+          var combo = '';
+          if (oc === 'Now' && R() < discP) combo = pick(R, ['SPF_ĐỒNG GIÁ 2 PIZZA SIZE S 89K', 'SPF_GIẢM 60% PIZZA THỨ 2_M', 'SPF_GIẢM 60% PIZZA THỨ 2_L', 'SPF_TRUMDEAL_Pizza SF Size S 89k'], [4, 2, 1, 3]);
+          else if (oc === 'Dine In' && R() < sc.comboDI) combo = pick(R, ['COMBO DUO', 'COMBO SINGLE', 'COMBO BIG BOSS', 'Combo 2 Món Khai Vị', 'LTO Q4\\2026 Combo 4'], [3, 2, 2, 2, 2]);
+          else if (app && R() < 0.2) combo = 'Ưu Đãi Kèm Combo';
+          var rate = combo ? (combo.indexOf('SPF_') === 0 ? sc.depth * (0.75 + R() * 0.5) : 0.08 + R() * 0.06) : 0;
+          var ot = OT[oc];
+          lines.forEach(function (x) {
+            var vat = /Beer/.test(x[0]) ? 0.10 : 0.08, list = x[2] * (PIZZA.test(x[0]) ? sc.pizzaPx : 1);
+            var gross = Math.round(list * (1 - (DRINK.test(x[0]) ? rate * 0.4 : rate))), net = Math.round(gross / (1 + vat) * 100) / 100;
+            dish.push([date, x[0], chk, x[1], oc, ot[0], guests, 1, net, gross, hour, ot[1], combo]);
+          });
+          if (oc !== 'Dine In') { var pk = lines.filter(function (x) { return PIZZA.test(x[0]); }).length; if (pk) dish.push([date, 'TA Packaging', chk, 'Take away Pizza M', oc, ot[0], 1, pk, 0, 0, hour, ot[1], '']); }
+          if (oc === 'Online' || oc === 'Call Center') dish.push([date, 'Delivery Fee', chk, 'Delivery Fee', oc, ot[0], 1, 1, 23148.15, 25000, hour, ot[1], '']);
+        }
+      });
+    }
+    // roll the dish lines up into the three other reports, keyed by check
+    var seenH = {}, seenO = {};
+    dish.forEach(function (r) {
+      var kh = r[0] + '|' + r[10], ko = r[0] + '|' + r[11], kp = r[0] + '|' + r[12];
+      var H = perHour[kh] || (perHour[kh] = [r[0], r[10], 0, 0, 0]); H[2] += r[8]; H[3] += r[9]; if (!seenH[r[2]]) { seenH[r[2]] = 1; H[4]++; }
+      var O = perOT[ko] || (perOT[ko] = [r[0], r[11], 0, 0, 0]); O[2] += r[8]; O[3] += r[9]; if (!seenO[r[2]]) { seenO[r[2]] = 1; O[4]++; }
+      var P = perPromo[kp] || (perPromo[kp] = [r[0], r[12], 0, 0, 0, {}]); P[3] += r[8]; P[4] += r[9]; if (r[12] && !P[5][r[2]]) { P[5][r[2]] = 1; P[2]++; } else if (!r[12]) P[2] += r[7];
+    });
+    function v(o) { return Object.keys(o).sort().map(function (k) { return o[k]; }); }
+    return {
+      dish: dish.map(function (r) { return { d: r[0], cat: r[1], chk: String(r[2]), dish: r[3], oc: r[4], ot: r[5], g: r[6], q: r[7], n: r[8], gr: r[9] }; }),
+      time: v(perHour).map(function (r) { return { d: r[0], h: r[1], n: r[2], gr: r[3], tc: r[4] }; }),
+      otype: v(perOT).map(function (r) { return { d: r[0], ot: r[1], n: r[2], gr: r[3], tc: r[4] }; }),
+      promo: v(perPromo).map(function (r) { return { d: r[0], c: r[1], q: r[2], n: r[3], gr: r[4] }; })
+    };
+  }
+  function build() {
+    var base = { di: 30, spf: 19, grab: 2, xanh: 2.4, ta: 2.6, uptDI: 1.25, uptApp: 2.2, drinkDI: 0.55, discSpf: 0.42, depth: 0.32, comboDI: 0.22, pizzaPx: 1 };
+    var nov = { di: 29, spf: 24, grab: 2.2, xanh: 3, ta: 2.8, uptDI: 1.18, uptApp: 2.1, drinkDI: 0.5, discSpf: 0.55, depth: 0.36, comboDI: 0.24, pizzaPx: 1.04, rain: [4, 5, 18, 19, 20], closed: [] };
+    base.closed = [];
+    var p0 = month(2026, 10, 31, base, 1010), p1 = month(2026, 11, 30, nov, 2026);
+    var prices = {}, costs = {};
+    MENU.forEach(function (x) {
+      if (!x[2] || /Packaging|Delivery Fee/.test(x[0])) return;
+      var vat = /Beer/.test(x[0]) ? 10 : 8;
+      prices[x[1]] = { l0: x[2], l1: Math.round(x[2] * (PIZZA.test(x[0]) ? 1.04 : 1) / 1000) * 1000 || x[2], vat: vat };
+      var r = DRINK.test(x[0]) ? 0.22 : PIZZA.test(x[0]) ? 0.29 : /Chicken|Fried|Platter|Pork/.test(x[0]) ? 0.34 : 0.31;
+      costs[x[1]] = Math.round(x[2] / (1 + vat / 100) * r / 100) * 100;
+    });
+    return {
+      p0: p0, p1: p1, l0: 'T10/2026', l1: 'T11/2026', kind: 'Tháng trước', prices: prices, costs: costs,
+      comm0: { ShopeeFood: 25, GrabFood: 25, 'Xanh Ngon': 20 }, comm1: { ShopeeFood: 25, GrabFood: 25, 'Xanh Ngon': 20 },
+      seats: 80, area: 220, plan: { net: 900e6, tc: 1850, ta: 0, food: 30 },
+      events: [['2026-11-04', 'Mưa lớn 2 ngày, khách tại chỗ giảm'], ['2026-11-10', 'Tăng giá pizza ~4%'], ['2026-11-15', 'Chạy thêm deal SPF_ trên ShopeeFood'], ['2026-11-18', 'Mưa lớn 3 ngày']]
+    };
+  }
+  root.RSample = { build: build, MENU: MENU };
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>{
+'use strict';
+new MutationObserver(() => { for (const c of document.querySelectorAll('.stack td:not([data-l])')) { let i = 0, p = c; while ((p = p.previousElementSibling)) i += p.colSpan; c.dataset.l = (c.closest('table').rows[0].cells[i] || {}).textContent || ''; } }).observe(document, { childList: true, subtree: true });
+const $ = id => document.getElementById(id);
+const E = window.RE;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LS = 'rpr.v1';
+const LIBS = { xlsx: 'vendor/exceljs.min.js', h2c: 'vendor/html2canvas.min.js', pdf: 'vendor/jspdf.umd.min.js' };
+const DEF = () => ({ chanMap: Object.assign({}, E.CHANNELS), comm0: {}, comm1: {}, dayparts: E.DAYPARTS.map(x => Object.assign({}, x)), nonFood: E.NONFOOD.slice(), seats: 0, area: 0, plan: { net: 0, tc: 0, food: 0 }, thr: 5, prices: {}, costs: {}, events: [], actions: null, l0: 'Kỳ so sánh', l1: 'Kỳ hiện tại', kind: 'Tháng trước' });
+function loadCfg() { try { const c = JSON.parse(localStorage.getItem(LS)); return c ? Object.assign(DEF(), c) : DEF(); } catch (e) { return DEF(); } }
+const S = { sample: false, per: [{ files: [] }, { files: [] }], cfg: DEF(), res: null, page: 1, tab: 1, dim: 'ch', mv: 'cat', dirty: true, expand: {}, sel: null, dl: null, sm: null };
+const IDB = { open() { return new Promise((ok, no) => { const r = indexedDB.open('rpr', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); },
+  async get(k) { const db = await IDB.open(); return new Promise(ok => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); }); },
+  async set(k, v) { const db = await IDB.open(); return new Promise(ok => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = ok; }); } };
+function storeData() { if (S.sample) return; IDB.set('per', S.per.map(p => ({ files: p.files }))).catch(() => { }); }
+function persist() { if (S.sample) return; try { localStorage.setItem(LS, JSON.stringify(S.cfg)); } catch (e) { } }
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 3200); }
+function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('load ' + src)); document.head.appendChild(s); }); }
+const M = E.money, SM = E.sMoney, P = E.pct, SP = E.sPct;
+const cls = v => v > 0 ? 'p' : v < 0 ? 'm' : '';
+const sg = v => '<span class="' + cls(v) + '">' + esc(SM(v)) + '</span>';
+const lbl = () => ({ p0: S.cfg.l0 || 'Kỳ so sánh', p1: S.cfg.l1 || 'Kỳ hiện tại' });
+function rich(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, (m, x) => '<b class="' + (x.charAt(0) === '+' ? 'p' : x.charAt(0) === '−' ? 'm' : '') + '">' + x + '</b>'); }
+function plain(t) { return String(t).replace(/\*\*/g, ''); }
+function numIn(v) { const n = E.num(v); return n === null ? 0 : n; }
+
+/* ---------------- data plumbing ---------------- */
+function ds(i) { const o = { dish: [], otype: [], time: [], promo: [] }; S.per[i].files.forEach(f => { if (f.type) o[f.type] = o[f.type].concat(f.records); }); return o; }
+function cfgFor(i) {
+  const c = S.cfg, pr = {};
+  Object.keys(c.prices).forEach(k => { const p = c.prices[k], l = i ? (p.l1 || p.l0) : (p.l0 || p.l1); if (l > 0) pr[k] = { list: l, vat: p.vat }; });
+  return { chanMap: c.chanMap, nonFood: c.nonFood, dayparts: c.dayparts, prices: pr, costs: c.costs, comm: i ? c.comm1 : c.comm0, seats: c.seats };
+}
+function hasData(i) { return S.per[i].files.some(f => f.type === 'dish' || f.type === 'otype'); }
+function isProfit() { const c = S.cfg; return Object.keys(c.costs).length > 0 || [c.comm0, c.comm1].some(o => Object.values(o).some(v => +v > 0)); }
+function compute() {
+  if (!hasData(0) || !hasData(1)) { S.res = null; return false; }
+  const A0 = E.aggregate(ds(0), cfgFor(0)), A1 = E.aggregate(ds(1), cfgFor(1)), profit = isProfit();
+  const R = E.analyze(A0, A1, { profit });
+  const I = E.insights(R, A0, A1, lbl(), S.cfg.plan);
+  S.res = { A0, A1, R, I, profit };
+  S.res.notes = notices();
+  S.res.sc = scorecard();
+  if (!S.cfg.actions) S.cfg.actions = defaultActions();
+  S.dirty = false;
+  return true;
+}
+function restaurantName() {
+  const r = {}; S.per.forEach(p => p.files.forEach(f => (f.rest || []).forEach(x => r[x] = 1)));
+  const k = Object.keys(r); return k.length ? k.join(', ') + (S.sample ? ' (mẫu)' : '') : 'Nhà hàng';
+}
+
+/* ---------------- sample ---------------- */
+function loadSample() {
+  const X = window.RSample.build();
+  const mk = (p, l) => ['dish', 'otype', 'time', 'promo'].map(t => ({ name: E.REPORTS[t].name + ' (mẫu ' + l + ')', type: t, records: p[t], n: p[t].length, from: p[t][0] && p[t][0].d, to: p[t].length && p[t][p[t].length - 1].d, rest: ['TPC_062_TCT_HAN'], sample: true }));
+  S.sample = true;
+  S.per = [{ files: mk(X.p0, X.l0) }, { files: mk(X.p1, X.l1) }];
+  S.per.forEach(p => p.files.forEach(f => { const ds = f.records.map(r => r.d).sort(); f.from = ds[0]; f.to = ds[ds.length - 1]; }));
+  S.cfg = Object.assign(DEF(), { l0: X.l0, l1: X.l1, kind: X.kind, comm0: X.comm0, comm1: X.comm1, seats: X.seats, area: X.area, plan: X.plan, prices: X.prices, costs: X.costs, events: X.events, actions: null });
+  S.dirty = true;
+  $('banner').hidden = false;
+}
+function leaveSample() {
+  if (!S.sample) return;
+  S.sample = false; S.per = [{ files: [] }, { files: [] }]; S.cfg = loadCfg(); S.res = null; S.dirty = true; $('banner').hidden = true;
+}
+
+/* ---------------- file reading ---------------- */
+function cv(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'object' && !(v instanceof Date)) { if (v.richText) return v.richText.map(t => t.text).join(''); if ('result' in v) return v.result; if (v.text) return v.text; if (v.error) return null; }
+  return v;
+}
+async function readWb(file) {
+  if (!window.ExcelJS) await loadScript(LIBS.xlsx);
+  const wb = new window.ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+  const out = [];
+  wb.eachSheet(ws => { const rows = []; ws.eachRow({ includeEmpty: true }, (row, n) => { const a = []; for (let i = 1; i <= ws.columnCount; i++) a.push(cv(row.getCell(i).value)); rows[n - 1] = a; }); for (let i = 0; i < rows.length; i++) rows[i] = rows[i] || []; out.push({ name: ws.name, rows }); });
+  return out;
+}
+async function addFiles(list, i) {
+  leaveSample();
+  const files = Array.from(list).filter(f => /\.xlsx$/i.test(f.name));
+  if (!files.length) { toast('Chỉ nhận file .xlsx xuất từ POS'); return; }
+  for (const f of files) {
+    if (S.per[i].files.some(x => x.name === f.name && x.size === f.size)) { toast('Đã có file ' + f.name); continue; }
+    try {
+      const sheets = await readWb(f); let found = false;
+      sheets.forEach(sh => { const p = E.parseSheet(sh.rows); if (p.type) { found = true; S.per[i].files.push({ name: f.name, size: f.size, type: p.type, records: p.records, n: p.records.length, skipped: p.skipped, bad: p.bad, from: p.from, to: p.to, rest: p.restaurants }); } });
+      if (!found) S.per[i].files.push({ name: f.name, size: f.size, type: null, records: [], n: 0 });
+    } catch (e) { S.per[i].files.push({ name: f.name, size: f.size, type: null, records: [], n: 0, err: true }); toast('Không đọc được ' + f.name); }
+  }
+  autoLabel(i); S.dirty = true; S.cfg.actions = null; persist(); storeData(); renderInputs();
+}
+function autoLabel(i) {
+  const fs = S.per[i].files.filter(f => f.from); if (!fs.length) return;
+  const from = fs.map(f => f.from).sort()[0], to = fs.map(f => f.to).sort().pop();
+  const key = i ? 'l1' : 'l0', def = i ? 'Kỳ hiện tại' : 'Kỳ so sánh';
+  if (S.cfg[key] && S.cfg[key] !== def && !S.cfg['_auto' + i]) return;
+  const [y, m, d] = from.split('-'), [y2, m2, d2] = to.split('-');
+  S.cfg[key] = from === to ? (+d) + '/' + (+m) + '/' + y : y === y2 && m === m2 ? 'T' + (+m) + '/' + y + (d === '01' && +d2 >= 28 ? '' : ' (' + (+d) + '–' + (+d2) + ')') : (+d) + '/' + (+m) + '–' + (+d2) + '/' + (+m2) + '/' + y2;
+  S.cfg['_auto' + i] = true;
+}
+
+/* ---------------- notices ---------------- */
+function notices() {
+  const { A0, A1, R } = S.res, L = lbl(), out = [];
+  const add = (lv, h, t, items) => out.push({ lv, h, t, items: items || [] });
+  [[A0, L.p0], [A1, L.p1]].forEach(([A, l]) => {
+    A.recon.forEach(r => { if (!r.ok) add('warn', 'Lệch số giữa các báo cáo (' + l + ')', r.report + ' lệch ' + E.full(r.dNet) + 'đ' + (r.tc !== null ? ' và ' + r.dTc + ' bill' : '') + ' so với Dish Sales. Kiểm tra lại khoảng ngày khi xuất báo cáo.'); });
+    const u = Object.keys(A.unknownOC); if (u.length) add('warn', 'Order Category chưa gán kênh (' + l + ')', 'Gán kênh ở bước 1 để tính đúng cơ cấu và hoa hồng.', u);
+    if (!A.hasDish) add('warn', 'Thiếu Dish Sales (' + l + ')', 'Không tính được số món, giảm giá, số khách và phân tích menu cho kỳ này.');
+    if (!A.hasTime) add('info', 'Thiếu Time Sales (' + l + ')', 'Chưa phân tích được theo khung giờ.');
+    const mp = Object.keys(A.missingPrice); if (mp.length) add('info', mp.length + ' món chưa có giá niêm yết (' + l + ')', 'Tạm dùng giá cao nhất trong kỳ.', mp);
+    const mc = Object.keys(A.missingCost); if (mc.length) add('warn', mc.length + ' món chưa có giá vốn (' + l + ')', 'Giá vốn của các món này tạm tính bằng 0, lãi gộp có thể cao hơn thực tế.', mc);
+  });
+  S.per.forEach((p, i) => p.files.forEach(f => { if (f.bad) add('warn', f.bad + ' dòng bị bỏ qua (' + (i ? L.p1 : L.p0) + ')', f.name + ': các dòng có doanh thu nhưng thiếu ngày, số bill hoặc giờ. Số liệu kỳ này đang thiếu, kiểm tra lại file xuất từ POS.'); }));
+  if (A1.discEst) add('info', 'Giảm giá đang là số ước tính', 'Báo cáo POS không có tiền giảm giá. Công cụ lấy giá cao nhất của mỗi món trong kỳ làm giá niêm yết. Nhập bảng giá menu để có số chính xác.');
+  const rs = {}; S.per.forEach(p => p.files.forEach(f => (f.rest || []).forEach(x => rs[x] = 1)));
+  if (Object.keys(rs).length > 1) add('warn', 'Có nhiều nhà hàng trong dữ liệu', 'Kết quả đang cộng chung các nhà hàng.', Object.keys(rs));
+  if (A0.dates.length && A1.dates.length && A0.dates[A0.dates.length - 1] >= A1.dates[0] && A1.dates[A1.dates.length - 1] >= A0.dates[0]) add('warn', 'Hai kỳ bị trùng ngày', 'Kỳ so sánh và kỳ hiện tại có ngày chồng nhau. Kiểm tra lại file đã thả vào từng kỳ.');
+  if (A0.days !== A1.days) add('info', 'Số ngày mở cửa khác nhau', L.p0 + ': ' + A0.days + ' ngày, ' + L.p1 + ': ' + A1.days + ' ngày. Phần chênh nằm ở hiệu ứng "Số ngày mở cửa" (Level 03).');
+  const nw = R.L2.rows.filter(r => r.flag === 'new').map(r => r.key), ls = R.L2.rows.filter(r => r.flag === 'lost').map(r => r.key);
+  if (nw.length) add('info', 'Kênh mới trong kỳ hiện tại', 'Toàn bộ giá trị của kênh mới nằm ở hiệu ứng Mix.', nw);
+  if (ls.length) add('info', 'Kênh không còn phát sinh', 'Phần giảm của các kênh này nằm ở Traffic và Mix.', ls);
+  if (R.ok) add('ok', 'Kiểm tra cộng dồn: khớp', 'Các hiệu ứng của Level 01, 02, 03 cộng lại đúng bằng chênh lệch tổng.');
+  else add('warn', 'Kiểm tra cộng dồn: lệch', 'Có hiệu ứng không cộng đúng bằng chênh lệch. Vui lòng báo lại dữ liệu đầu vào.');
+  return out;
+}
+
+/* ---------------- scorecard ---------------- */
+function scorecard() {
+  const { R, A0, A1 } = S.res, k0 = R.k0, k1 = R.k1, pl = S.cfg.plan, thr = (+S.cfg.thr || 5) / 100, area = +S.cfg.area || 0;
+  const money = v => M(v), n2 = v => E.nf2.format(v), n1 = v => E.n1(v), n0 = v => E.n0(v), pc = v => P(v);
+  const rows = [
+    ['Doanh thu thuần', k0.net, k1.net, money, 1, 'rel', pl.net || null],
+    ['Số bill', k0.tc, k1.tc, n0, 1, 'rel', pl.tc || null],
+    ['Giá trị bill TB (TA)', k0.ta, k1.ta, money, 1, 'rel', pl.net && pl.tc ? pl.net / pl.tc : null],
+    ['Số món/bill (UPT)', k0.upt, k1.upt, n2, 1, 'rel'],
+    ['Bill/ngày', k0.tcDay, k1.tcDay, n1, 1, 'rel'],
+    ['Doanh thu/ngày', k0.netDay, k1.netDay, money, 1, 'rel', pl.net ? pl.net / Math.max(1, A1.days) : null],
+    ['Tỷ lệ giảm giá' + (A1.discEst ? ' (ước tính)' : ''), k0.discPct, k1.discPct, pc, -1, 'pts'],
+    ['% doanh thu qua app', k0.appShare, k1.appShare, pc, 0, 'pts'],
+    ['% doanh thu qua combo/KM', k0.promoShare, k1.promoShare, pc, 0, 'pts'],
+    ['TA tại chỗ', k0.taDI, k1.taDI, money, 1, 'rel'],
+    ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, money, 1, 'rel'],
+    ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, n2, 1, 'rel'],
+    ['Food cost %', k0.foodPct, k1.foodPct, pc, -1, 'pts', pl.food ? pl.food / 100 : null],
+    ['Hoa hồng app % doanh thu', k0.commPct, k1.commPct, pc, -1, 'pts'],
+    ['Lãi gộp', k0.gm, k1.gm, money, 1, 'rel'],
+    ['Biên lãi gộp %', k0.gmPct, k1.gmPct, pc, 1, 'pts'],
+    ['Doanh thu/ghế/ngày', k0.seatDay, k1.seatDay, money, 1, 'rel'],
+    ['Vòng quay ghế (khách/ghế/ngày)', k0.turnover, k1.turnover, n2, 1, 'rel'],
+    ['Doanh thu/m²/ngày', area ? k0.netDay / area : null, area ? k1.netDay / area : null, money, 1, 'rel']
+  ];
+  return rows.filter(r => r[1] != null || r[2] != null).map(r => {
+    const [name, a, b, f, good, kind, plan] = r;
+    let st = '', d = (b || 0) - (a || 0), rel = a ? d / Math.abs(a) : 0;
+    if (good && a != null && b != null) {
+      const worse = good * d < -1e-12, mag = kind === 'rel' ? Math.abs(rel) : Math.abs(d);
+      st = !worse ? 'g' : mag >= (kind === 'rel' ? thr : 0.01) ? 'r' : 'a';
+    }
+    let ps = '';
+    if (plan != null && b != null) { const ach = kind === 'pts' ? (good < 0 ? (b <= plan ? 1 : plan / b) : b / plan) : b / plan; ps = ach >= 1 ? 'g' : ach >= 0.95 ? 'a' : 'r'; if (!st || ps === 'r') st = ps; }
+    return { name, a, b, f, good, kind, plan, d, rel, st, ps };
+  });
+}
+
+/* ---------------- charts ---------------- */
+const RO = new ResizeObserver(es => es.forEach(e => { const f = e.target._draw; if (f) try { f(); } catch (err) { console.error(err); } }));
+const probe = document.createElement('i');
+function colors(host) {
+  const o = {}; host.appendChild(probe);
+  ['--pos', '--neg', '--base', '--cur', '--ink', '--mut', '--line', '--bg'].forEach(v => { probe.style.color = 'var(' + v + ')'; o[v.slice(2)] = getComputedStyle(probe).color; });
+  probe.remove(); if (host.closest('.sheet')) o.bg = '#ffffff'; return o;
+}
+function fixVars(svg, C) { return svg.replace(/var\(--(pos|neg|base|cur|ink|mut|line|bg)\)/g, (m, k) => C[k]); }
+function mount(el, fn) { el._draw = () => fn(el); RO.observe(el); el._draw(); }
+function wrapLbl(s, n) { const w = String(s).split(' '), a = []; let c = ''; w.forEach(x => { if ((c + ' ' + x).trim().length <= n || !c) c = (c + ' ' + x).trim(); else { a.push(c); c = x; } }); if (c) a.push(c); return a.slice(0, 2); }
+function waterfall(bars, base) {
+  return host => {
+    const W = host.clientWidth, H = host.clientHeight; if (!W || !H) return;
+    const small = W < 520;
+    let run = 0; const pts = bars.map(b => { if (b.t) { run = b.v; return Object.assign({}, b, { a: Math.min(0, b.v), z: b.v }); } const s = run; run += b.v; return Object.assign({}, b, { a: s, z: run }); });
+    const tops = pts.map(p => Math.max(p.a, p.z)), lows = pts.filter(p => !p.t).map(p => Math.min(p.a, p.z)).concat(pts.filter(p => p.t).map(p => p.v));
+    const mx = Math.max.apply(null, tops), mn = Math.min.apply(null, lows), range = (mx - mn) || Math.abs(mx) || 1;
+    let floor = mn - range * 0.6; if (mn >= 0 && floor < 0) floor = 0; const broken = floor > 0;
+    const top = mx + range * 0.14, pT = 22, pB = small ? 40 : 46, n = pts.length, bw = W / n, gap = Math.max(6, bw * (small ? 0.18 : 0.26));
+    const y = v => pT + (top - v) / (top - floor) * (H - pT - pB);
+    const col = p => p.t === 'base' ? 'var(--base)' : p.t === 'cur' ? 'var(--cur)' : p.v >= 0 ? 'var(--pos)' : 'var(--neg)';
+    let s = '';
+    pts.forEach((p, i) => {
+      const x = i * bw + gap / 2, w = bw - gap, y1 = p.t ? y(p.v) : y(Math.max(p.a, p.z)), y2 = p.t ? y(floor) : y(Math.min(p.a, p.z)), h = Math.max(1.5, y2 - y1);
+      s += '<rect x="' + x.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + col(p) + '"><title>' + esc(p.l + ': ' + (p.t ? M(p.v) : SM(p.v))) + '</title></rect>';
+      if (p.t && broken) { const yb = y2 - 14; s += '<path d="M' + (x - 2) + ' ' + (yb + 4) + 'L' + (x + w + 2) + ' ' + (yb - 4) + 'M' + (x - 2) + ' ' + (yb + 10) + 'L' + (x + w + 2) + ' ' + (yb + 2) + '" stroke="var(--bg)" stroke-width="3.5"/>'; }
+      if (i < n - 1) { const yy = y(p.t ? p.v : p.z); s += '<line x1="' + (x + w).toFixed(1) + '" x2="' + ((i + 1) * bw + gap / 2).toFixed(1) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" stroke="var(--mut)" stroke-dasharray="2 3" stroke-width="1"/>'; }
+      const neg = !p.t && p.v < 0, ty = neg ? y2 + 14 : y1 - 7;
+      s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" font-size="' + (small ? 10.5 : 12.5) + '" font-weight="700" fill="' + (p.t ? 'var(--ink)' : col(p)) + '">' + esc(p.t ? M(p.v) : SM(p.v)) + '</text>';
+      if (!small && !p.t && base) s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (neg ? ty + 13 : ty - 14).toFixed(1) + '" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--mut)">' + esc(SP(p.v / base)) + '</text>';
+      wrapLbl(p.l, small ? 8 : Math.max(8, Math.floor(bw / 7))).forEach((ln, j) => { s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (H - pB + 16 + j * 13).toFixed(1) + '" text-anchor="middle" font-size="' + (small ? 10 : 11.5) + '" font-weight="600" fill="var(--mut)">' + esc(ln) + '</text>'; });
+    });
+    s += '<line x1="0" x2="' + W + '" y1="' + y(floor).toFixed(1) + '" y2="' + y(floor).toFixed(1) + '" stroke="var(--line)"/>';
+    host.innerHTML = fixVars('<svg font-family="Quicksand, system-ui, sans-serif" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Biểu đồ thác nước">' + s + '</svg>', colors(host));
+  };
+}
+function groupBars(cats, s0, s1, fmt) {   // grouped bars: two series per category
+  return host => {
+    const W = host.clientWidth, H = host.clientHeight; if (!W || !H) return;
+    const small = W < 520, n = cats.length, mx = Math.max(1, ...s0, ...s1) * 1.12, pT = 12, pB = 26, pL = small ? 34 : 46, bw = (W - pL) / n, y = v => pT + (1 - v / mx) * (H - pT - pB);
+    let s = '';
+    [0.5, 1].forEach(f => { const v = mx / 1.12 * f, yy = y(v); s += '<line x1="' + pL + '" x2="' + W + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)"/><text x="' + (pL - 6) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="10.5" fill="var(--mut)">' + esc(fmt(v)) + '</text>'; });
+    cats.forEach((c, i) => {
+      const x = pL + i * bw, w = Math.max(3, (bw - 6) / 2);
+      [[s0[i], 'var(--base)', 0], [s1[i], 'var(--cur)', 1]].forEach(([v, cl, k]) => { const yy = y(v || 0); s += '<rect x="' + (x + 3 + k * w).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + (w - 1).toFixed(1) + '" height="' + Math.max(0, y(0) - yy).toFixed(1) + '" rx="1.5" fill="' + cl + '"><title>' + esc(c + ': ' + fmt(v || 0)) + '</title></rect>'; });
+      if (!small || i % 2 === 0) s += '<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" font-weight="600" fill="var(--mut)">' + esc(c) + '</text>';
+    });
+    host.innerHTML = fixVars('<svg font-family="Quicksand, system-ui, sans-serif" viewBox="0 0 ' + W + ' ' + H + '" role="img">' + s + '</svg>', colors(host));
+  };
+}
+function lines(s0, s1, fmt) {   // daily net, aligned by day of period
+  return host => {
+    const W = host.clientWidth, H = host.clientHeight; if (!W || !H) return;
+    const n = Math.max(s0.length, s1.length, 2), all = s0.concat(s1).map(p => p.v), mx = Math.max(1, ...all) * 1.12, pT = 12, pB = 26, pL = W < 520 ? 34 : 46;
+    const x = i => pL + i / (n - 1) * (W - pL - 10), y = v => pT + (1 - v / mx) * (H - pT - pB);
+    let s = '';
+    [0.5, 1].forEach(f => { const v = mx / 1.12 * f, yy = y(v); s += '<line x1="' + pL + '" x2="' + W + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)"/><text x="' + (pL - 6) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="10.5" fill="var(--mut)">' + esc(fmt(v)) + '</text>'; });
+    for (let i = 0; i < n; i += 5) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--mut)">' + (i + 1) + '</text>';
+    [[s0, 'var(--base)'], [s1, 'var(--cur)']].forEach(([ser, cl]) => {
+      if (!ser.length) return;
+      s += '<polyline fill="none" stroke="' + cl + '" stroke-width="2.2" stroke-linejoin="round" points="' + ser.map((p, i) => x(i).toFixed(1) + ',' + y(p.v).toFixed(1)).join(' ') + '"/>';
+      ser.forEach((p, i) => { s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.v).toFixed(1) + '" r="2.6" fill="' + cl + '"><title>' + esc(p.d + ': ' + fmt(p.v)) + '</title></circle>'; });
+    });
+    host.innerHTML = fixVars('<svg font-family="Quicksand, system-ui, sans-serif" viewBox="0 0 ' + W + ' ' + H + '" role="img">' + s + '</svg>', colors(host));
+  };
+}
+function scatter(items, popT, avgM) {
+  return host => {
+    const W = host.clientWidth, H = host.clientHeight; if (!W || !H || !items.length) return;
+    const pL = 48, pB = 30, pT = 14, pR = 12, mxX = Math.max(...items.map(i => i.share)) * 1.1, mxY = Math.max(...items.map(i => i.m)) * 1.1, mxN = Math.max(...items.map(i => i.n));
+    const x = v => pL + v / mxX * (W - pL - pR), y = v => pT + (1 - v / mxY) * (H - pT - pB);
+    const C = { Star: 'var(--pos)', Plowhorse: '#c98a2b', Puzzle: '#5b7fb8', Dog: 'var(--neg)' };
+    let s = '<line x1="' + x(popT) + '" x2="' + x(popT) + '" y1="' + pT + '" y2="' + (H - pB) + '" stroke="var(--mut)" stroke-dasharray="4 4"/><line x1="' + pL + '" x2="' + (W - pR) + '" y1="' + y(avgM) + '" y2="' + y(avgM) + '" stroke="var(--mut)" stroke-dasharray="4 4"/>';
+    s += '<text x="' + (W - pR) + '" y="' + (pT + 12) + '" text-anchor="end" font-size="12" font-weight="700" fill="var(--pos)">Star</text><text x="' + (pL + 6) + '" y="' + (pT + 12) + '" font-size="12" font-weight="700" fill="#5b7fb8">Puzzle</text><text x="' + (W - pR) + '" y="' + (H - pB - 6) + '" text-anchor="end" font-size="12" font-weight="700" fill="#c98a2b">Plowhorse</text><text x="' + (pL + 6) + '" y="' + (H - pB - 6) + '" font-size="12" font-weight="700" fill="var(--neg)">Dog</text>';
+    s += '<text x="' + ((W + pL) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="var(--mut)">Tỷ trọng số lượng bán →</text><text x="12" y="' + ((H - pB) / 2) + '" font-size="11" fill="var(--mut)" transform="rotate(-90 12 ' + ((H - pB) / 2) + ')" text-anchor="middle">Lãi gộp / món →</text>';
+    const top = items.slice().sort((a, b) => b.n - a.n).slice(0, W < 520 ? 4 : 8).map(i => i.name);
+    items.forEach(i => { const r = 3 + 11 * Math.sqrt(i.n / mxN); s += '<circle cx="' + x(i.share).toFixed(1) + '" cy="' + y(i.m).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + C[i.quad] + '" fill-opacity=".55" stroke="' + C[i.quad] + '"><title>' + esc(i.name + ' · ' + i.quad + ' · ' + E.n0(i.q) + ' món · ' + M(i.n)) + '</title></circle>'; });
+    const placed = [];
+    items.filter(i => top.indexOf(i.name) >= 0).sort((a, b) => b.n - a.n).forEach(i => {
+      const t = i.name.length > 22 ? i.name.slice(0, 21) + '…' : i.name, tw = t.length * 6.2, cx = x(i.share), right = cx + 8 + tw > W - pR, lx = right ? cx - 8 - tw : cx + 8, ly = y(i.m) - 8;
+      if (placed.some(b => lx < b[0] + b[2] && lx + tw > b[0] && Math.abs(ly - b[1]) < 13)) return;
+      placed.push([lx, ly, tw]);
+      s += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" font-size="11" font-weight="600" fill="var(--ink)">' + esc(t) + '</text>';
+    });
+    host.innerHTML = fixVars('<svg font-family="Quicksand, system-ui, sans-serif" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Ma trận menu">' + s + '</svg>', colors(host));
+  };
+}
+function vbar(v, mx) { if (!mx) return ''; const w = Math.min(50, Math.abs(v) / mx * 50); return '<span class="vb"><i style="' + (v >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w.toFixed(1) + '%;background:var(--' + (v >= 0 ? 'pos' : 'neg') + ')"></i></span>'; }
+const legend2 = L => '<div class="lg"><span><i style="background:var(--base)"></i>' + esc(L.p0) + '</span><span><i style="background:var(--cur)"></i>' + esc(L.p1) + '</span></div>';
+const legend = L => '<div class="lg"><span><i style="background:var(--base)"></i>' + esc(L.p0) + '</span><span><i style="background:var(--cur)"></i>' + esc(L.p1) + '</span><span><i style="background:var(--pos)"></i>Tăng</span><span><i style="background:var(--neg)"></i>Giảm</span></div>';
+
+/* ---------------- page 1 ---------------- */
+function renderInputs() {
+  const L = lbl(), TYPES = ['dish', 'otype', 'time', 'promo'];
+  $('periods').innerHTML = [0, 1].map(i => {
+    const fs = S.per[i].files, has = {}; fs.forEach(f => { if (f.type) has[f.type] = 1; });
+    let A = null; try { if (hasData(i)) A = E.aggregate(ds(i), cfgFor(i)); } catch (e) { }
+    return '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><div><div class="eyebrow" style="margin:0">' + (i ? 'Kỳ hiện tại' : 'Kỳ so sánh') + '</div></div>' +
+      (fs.length ? '<button class="btn ghost sm" data-clr="' + i + '">Xóa file</button>' : '') + '</div>' +
+      '<div class="row" style="margin-bottom:12px"><label class="f" style="flex:1">Tên kỳ<input data-lbl="' + i + '" value="' + esc(i ? L.p1 : L.p0) + '"></label>' +
+      (i ? '' : '<label class="f">Loại so sánh<select id="kind">' + ['Tháng trước', 'Cùng kỳ năm trước', 'Tuần trước', 'Kỳ khác'].map(k => '<option' + (S.cfg.kind === k ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></label>') + '</div>' +
+      '<div class="drop" data-drop="' + i + '" tabindex="0" role="button"><b>Kéo thả file .xlsx từ POS vào đây</b><span>hoặc bấm để chọn, có thể chọn nhiều file cùng lúc</span></div>' +
+      '<div class="files">' + fs.map((f, j) => '<div class="fileit"><i class="' + (f.type ? '' : 'bad') + '">' + esc(f.type ? E.REPORTS[f.type].name : 'Không nhận ra') + '</i><div><b>' + esc(f.name) + '</b><small>' + (f.type ? E.n0(f.n) + ' dòng' + (f.from ? ' · ' + esc(f.from) + (f.to !== f.from ? ' → ' + esc(f.to) : '') : '') + (f.skipped ? ' · bỏ ' + f.skipped + ' dòng tổng/trống' : '') + (f.bad ? ' · <b class="m">' + f.bad + ' dòng có doanh thu nhưng không đọc được</b>' : '') : 'Cần file có dòng tiêu đề như báo cáo POS gốc') + '</small></div>' + (f.sample ? '' : '<button class="x" data-rm="' + i + ':' + j + '" aria-label="Xóa file">×</button>') + '</div>').join('') + '</div>' +
+      '<div class="recon">' + TYPES.map(t => '<span class="chip ' + (has[t] ? 'ok' : '') + '">' + (has[t] ? '✓ ' : '') + E.REPORTS[t].name + '</span>').join('') + '</div>' +
+      (A ? '<div class="recon">' + '<span class="chip">' + esc(M(A.net)) + ' · ' + E.n0(A.tc) + ' bill · ' + A.days + ' ngày</span>' + A.recon.map(r => '<span class="chip ' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? '✓ khớp ' : '! lệch ') + esc(r.report) + '</span>').join('') + '</div>' : '') +
+      '</div>';
+  }).join('');
+  // channel map
+  const ocs = {}; Object.keys(S.cfg.chanMap).forEach(k => ocs[k] = 1); S.per.forEach(p => p.files.forEach(f => { if (f.type === 'dish') f.records.forEach(r => { if (r.oc) ocs[r.oc] = 1; }); }));
+  $('chanMap').innerHTML = Object.keys(ocs).map(k => '<tr><td>' + esc(k) + '</td><td class="l"><input data-oc="' + esc(k) + '" value="' + esc(S.cfg.chanMap[k] || '') + '" list="chanList" placeholder="Chưa gán"></td></tr>').join('');
+  const chans = [...new Set(Object.values(S.cfg.chanMap).filter(Boolean))];
+  if (!$('chanList')) { const d = document.createElement('datalist'); d.id = 'chanList'; document.body.appendChild(d); }
+  $('chanList').innerHTML = chans.map(c => '<option value="' + esc(c) + '">').join('');
+  $('commTb').innerHTML = chans.map(c => '<tr><td>' + esc(c) + '</td><td><input type="number" step="0.5" min="0" data-cm="0" data-ch="' + esc(c) + '" value="' + esc(S.cfg.comm0[c] || '') + '" placeholder="0"></td><td><input type="number" step="0.5" min="0" data-cm="1" data-ch="' + esc(c) + '" value="' + esc(S.cfg.comm1[c] || '') + '" placeholder="0"></td></tr>').join('');
+  document.querySelectorAll('.lbl0').forEach(e => e.textContent = L.p0); document.querySelectorAll('.lbl1').forEach(e => e.textContent = L.p1);
+  $('chanHint').textContent = Object.values(S.cfg.comm1).some(v => +v > 0) ? 'đã nhập hoa hồng' : 'chưa nhập hoa hồng';
+  // restaurant & plan
+  $('seats').value = S.cfg.seats || ''; $('area').value = S.cfg.area || ''; $('planNet').value = S.cfg.plan.net ? E.n0(S.cfg.plan.net) : ''; $('planTc').value = S.cfg.plan.tc ? E.n0(S.cfg.plan.tc) : ''; $('planFood').value = S.cfg.plan.food || ''; $('thr').value = S.cfg.thr;
+  $('dayparts').innerHTML = S.cfg.dayparts.map((d, i) => '<div class="row" style="flex-wrap:nowrap"><input data-dp="' + i + '" data-k="name" value="' + esc(d.name) + '" style="flex:1" aria-label="Tên khung giờ"><input type="number" data-dp="' + i + '" data-k="from" value="' + d.from + '" style="width:72px" aria-label="Từ giờ"><input type="number" data-dp="' + i + '" data-k="to" value="' + d.to + '" style="width:72px" aria-label="Đến giờ"></div>').join('');
+  const np = Object.keys(S.cfg.prices).length, nc = Object.keys(S.cfg.costs).length;
+  $('priceStat').textContent = np || nc ? 'Đang dùng: ' + np + ' món có giá niêm yết, ' + nc + ' món có giá vốn.' : 'Chưa có bảng giá: giảm giá sẽ được ước tính, phân tích theo doanh thu thuần.';
+  $('priceHint').textContent = np || nc ? np + ' giá · ' + nc + ' giá vốn' : 'chưa nhập';
+  $('nonFood').value = S.cfg.nonFood.join(', ');
+  $('evTb').innerHTML = S.cfg.events.map((e, i) => '<tr><td class="l"><input type="date" data-ev="' + i + '" data-k="0" value="' + esc(e[0]) + '"></td><td class="l"><input data-ev="' + i + '" data-k="1" value="' + esc(e[1]) + '" placeholder="Mô tả sự kiện"></td><td><button class="x" data-evrm="' + i + '" aria-label="Xóa">×</button></td></tr>').join('') || '<tr><td colspan="3" class="l hint">Chưa có sự kiện.</td></tr>';
+  $('evHint').textContent = S.cfg.events.length ? S.cfg.events.length + ' sự kiện' : '';
+  renderRun();
+}
+function renderRun() {
+  const st = [0, 1].map(i => { let A = null; try { if (hasData(i)) A = E.aggregate(ds(i), cfgFor(i)); } catch (e) { } const l = i ? lbl().p1 : lbl().p0; return '<div><small>' + esc(l) + '</small><b>' + (A ? esc(M(A.net)) + ' · ' + E.n0(A.tc) + ' bill' : 'chưa có dữ liệu') + '</b></div>'; });
+  const ok = hasData(0) && hasData(1);
+  $('runst').innerHTML = st.join('') + '<div><small>Chế độ</small><b>' + (isProfit() ? 'Lãi gộp' : 'Doanh thu thuần') + '</b></div>';
+  $('runBtn').disabled = !ok; $('runBtn').textContent = ok ? 'Phân tích →' : 'Cần dữ liệu cả 2 kỳ';
+  $('runbar').hidden = S.page !== 1;
+}
+
+/* ---------------- page 2 ---------------- */
+function renderAnalysis() {
+  const r = S.res; if (!r) return;
+  const { R, I, A0, A1 } = r, L = lbl(), k0 = R.k0, k1 = R.k1, T = R.L1, pl = S.cfg.plan;
+  $('execTag').textContent = (r.profit ? 'Gross profit' : 'Net sales') + ' bridge · ' + L.p0 + ' → ' + L.p1 + ' · ' + restaurantName();
+  $('execTitle').textContent = I.title;
+  renderBullets(I.bullets);
+  const kp = [
+    ['d', L.p1 + ' · ' + (r.profit ? 'lãi gộp' : 'doanh thu thuần'), M(T.m1), SP(E.div(T.delta, Math.abs(T.m0)))],
+    ['', L.p0, M(T.m0), ''],
+    ['', 'Chênh lệch', SM(T.delta), ''],
+    ['', 'Số bill · TA', E.n0(k1.tc) + ' · ' + M(k1.ta), SP(E.div(k1.ta - k0.ta, k0.ta)) + ' TA']
+  ];
+  if (pl.net) kp.push(['', 'Đạt kế hoạch doanh thu', P(A1.net / pl.net), M(A1.net - pl.net) + ' so với KH']);
+  $('kpis').innerHTML = kp.map(x => '<div class="kpi ' + x[0] + '"><small>' + esc(x[1]) + '</small><span><b>' + esc(x[2]) + '</b> ' + (x[3] ? '<em class="' + (x[0] ? '' : cls(x[3].charAt(0) === '−' ? -1 : 1)) + '">' + esc(x[3]) + '</em>' : '') + '</span></div>').join('');
+  renderTree();
+  const nt = r.notes;
+  $('notices').innerHTML = '<details class="nts"' + (nt.some(n => n.lv === 'warn') ? ' open' : '') + '><summary><span>Lưu ý về dữ liệu (' + nt.length + ')</span><span class="hint">' + (nt.filter(n => n.lv === 'warn').length ? nt.filter(n => n.lv === 'warn').length + ' cảnh báo' : 'không có cảnh báo') + '</span></summary>' +
+    nt.map(n => '<div class="nt ' + n.lv + '"><i>' + (n.lv === 'warn' ? '!' : n.lv === 'ok' ? '✓' : 'i') + '</i><div><b>' + esc(n.h) + '</b><div>' + esc(n.t) + '</div>' + (n.items.length ? '<small>' + esc(n.items.slice(0, 8).join(', ')) + (n.items.length > 8 ? ' và ' + (n.items.length - 8) + ' mục khác' : '') + '</small>' : '') + '</div></div>').join('') + '</details>';
+  renderTabs(); renderPanel();
+}
+function renderBullets(b) { $('execBul').innerHTML = b.map(x => '<li><b>' + esc(x.h) + '.</b> ' + rich(x.t) + '</li>').join(''); }
+function treeData() {
+  const { R } = S.res, T2 = R.L2.T, L3 = R.L3, base = Math.abs(R.L1.m0);
+  const nd = (id, n, v, f, d) => ({ id, n, v, f, d });
+  const t = { root: nd('root', 'Chênh lệch ' + (R.profit ? 'lãi gộp' : 'doanh thu'), R.L1.delta, 'M1 − M0', 'Kết quả kỳ hiện tại trừ kỳ so sánh.'), base: base, br: [] };
+  t.br.push({ n: nd('traffic', 'Số bill (Traffic)', T2.traffic, '(TC1 − TC0) × W0', 'W0 = ' + (R.profit ? 'lãi gộp/bill' : 'giá trị bill TB') + ' kỳ so sánh (' + M(L3.W) + ').'), kids: [nd('days', 'Số ngày mở cửa', L3.days, '(D1/D0 − 1) × TC0 × W0', 'Phần bill tăng/giảm do số ngày mở cửa thay đổi.'), nd('prod', 'Bill/ngày', L3.prod, '(TC1/TC0 − D1/D0) × TC0 × W0', 'Năng suất thật: số bill mỗi ngày.')] });
+  t.br.push({ n: nd('mix', 'Cơ cấu kênh (Mix)', T2.mix, 'Σ (TC1,k − TC0,k × TC1/TC0) × W0,k', 'Dịch chuyển bill giữa các kênh có giá trị khác nhau.'), kids: [] });
+  t.br.push({ n: nd('check', 'Giá trị bill cùng kênh', T2.check, 'Σ (TA1,k − TA0,k) × TC1,k', 'TA từng kênh thay đổi khi giữ nguyên cơ cấu.'), kids: [nd('upt', 'Số món/bill', T2.upt, 'TC1 × (UPT1 − UPT0) × Giá0 × Thực thu0', 'Bán kèm, số món mỗi bill.'), nd('price', 'Giá TB/món', T2.price, 'TC1 × UPT1 × (Giá1 − Giá0) × Thực thu0', 'Giá niêm yết trung bình mỗi món (đổi giá, đổi cơ cấu món).'), nd('disc', 'Giảm giá', T2.disc, 'TC1 × UPT1 × Giá1 × (Thực thu1 − Thực thu0)', 'Thực thu = doanh thu thuần ÷ doanh thu theo giá niêm yết.')] });
+  if (R.profit) t.br.push({ n: nd('cost', 'Chi phí', T2.cost, '−Σ (CPB1,k − CPB0,k) × TC1,k', 'Chi phí trên mỗi bill thay đổi.'), kids: [nd('food', 'Giá vốn NVL', T2.food, '−Σ (Giá vốn/bill1 − Giá vốn/bill0) × TC1', 'Theo định lượng món.'), nd('comm', 'Hoa hồng app', T2.comm, '−Σ (Hoa hồng/bill1 − Hoa hồng/bill0) × TC1', 'Theo % hoa hồng từng kênh.')] });
+  return t;
+}
+function renderTree() {
+  const t = treeData(), mx = Math.max(...t.br.map(b => Math.abs(b.n.v)), 1);
+  const node = (n, root) => '<button class="nd' + (root ? ' root' : '') + (S.sel === n.id ? ' sel' : '') + '" data-n="' + n.id + '"><small>' + esc(n.n) + '</small><b class="' + (root ? '' : cls(n.v)) + '">' + esc(SM(n.v)) + '</b>' + (root ? '' : '<span class="bar" style="width:' + Math.max(4, Math.abs(n.v) / mx * 100).toFixed(0) + '%;background:var(--' + (n.v >= 0 ? 'pos' : 'neg') + ')"></span>') + '</button>';
+  $('tree').innerHTML = '<div class="tree">' + node(t.root, true) + '<div class="kids">' + t.br.map(b => '<div class="br">' + node(b.n) + (b.kids.length ? '<div class="leafs">' + b.kids.map(k => '<div class="leaf">' + node(k) + '</div>').join('') + '</div>' : '<div></div>') + '</div>').join('') + '</div></div>';
+  const all = [t.root].concat(...t.br.map(b => [b.n].concat(b.kids))), n = all.filter(x => x.id === S.sel)[0];
+  $('treeF').className = 'tf' + (n ? '' : ' hint');
+  $('treeF').innerHTML = n ? '<b>' + esc(n.n) + ': ' + esc(SM(n.v)) + '</b> <span class="hint">(' + esc(SP(n.v / (t.base || 1))) + ' so với kỳ so sánh)</span><code>' + esc(n.f) + '</code>' + esc(n.d) : 'Chọn một ô để xem công thức tính.';
+}
+const TABS = [[1, 'Level 01', 'Traffic & Check', 'Số bill, giá trị bill'], [2, 'Level 02', 'Mix', 'Kênh, khung giờ'], [3, 'Level 03', 'Công suất', 'Ngày mở cửa, bill/ngày'], [4, 'Menu', 'Món & combo', 'Nhóm món, khuyến mãi'], [5, 'Scorecard', 'KPI vận hành', 'So với kỳ trước, kế hoạch']];
+function renderTabs() {
+  const hasMenu = S.res.A0.hasDish && S.res.A1.hasDish;
+  $('tabs').innerHTML = TABS.map(t => '<button class="tb' + (S.tab === t[0] ? ' on' : '') + (t[0] === 4 && !hasMenu ? ' lock' : '') + '" role="tab" aria-selected="' + (S.tab === t[0]) + '" data-t="' + t[0] + '"><em>' + t[1] + '</em><b>' + t[2] + '</b><span>' + t[3] + '</span></button>').join('');
+}
+function head(title, L, extra) { return '<h3>' + esc(title) + '</h3><p class="hint" style="margin:0 0 12px">' + (S.res.profit ? 'Lãi gộp' : 'Doanh thu thuần') + ' · ' + esc(L.p0) + ' → ' + esc(L.p1) + ' · VND' + (extra || '') + '</p>'; }
+function takeaways(info) { return '<div class="take"><h4>Key takeaways</h4><ul class="bl">' + info.bullets.map(b => '<li><b>' + esc(b.h) + '.</b> ' + rich(b.t) + '</li>').join('') + '</ul>' + (info.actions && info.actions.length ? '<div class="acts2"><b>Gợi ý hành động</b><ul>' + info.actions.map(a => '<li>' + esc(a) + '</li>').join('') + '</ul></div>' : '') + '</div>'; }
+function table(headArr, rows, tot) { return '<div class="tw"><table class="stack"><thead><tr>' + headArr.map((h, i) => '<th' + (i === 0 ? ' class="l"' : '') + '>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + (tot || '') + '</tbody></table></div>'; }
+function tr(cells, cl) { return '<tr' + (cl ? ' class="' + cl + '"' : '') + '>' + cells.map((c, i) => '<td' + (i === 0 ? ' class="l"' : '') + '>' + c + '</td>').join('') + '</tr>'; }
+function bridgeBars(R, lv, L) {
+  const T1 = R.L1, T2 = R.L2.T, b = [{ l: L.p0, v: T1.m0, t: 'base' }];
+  if (lv === 1) b.push({ l: 'Số bill', v: T1.traffic }, { l: 'Số món/bill', v: T1.upt }, { l: 'Giá TB/món', v: T1.price }, { l: 'Giảm giá', v: T1.disc });
+  if (lv === 1 && R.profit) b.push({ l: 'Giá vốn', v: T1.food }, { l: 'Hoa hồng app', v: T1.comm });
+  if (lv === 2) b.push({ l: 'Số bill', v: T2.traffic }, { l: 'Cơ cấu kênh', v: T2.mix }, { l: 'Số món/bill', v: T2.upt }, { l: 'Giá TB/món', v: T2.price }, { l: 'Giảm giá', v: T2.disc });
+  if (lv === 3) b.push({ l: 'Số ngày mở cửa', v: R.L3.days }, { l: 'Bill/ngày', v: R.L3.prod }, { l: 'Cơ cấu kênh', v: T2.mix }, { l: 'Bill cùng kênh', v: T2.check });
+  if (lv >= 2 && R.profit) b.push({ l: 'Giá vốn', v: T2.food }, { l: 'Hoa hồng app', v: T2.comm });
+  b.push({ l: L.p1, v: T1.m1, t: 'cur' });
+  return b;
+}
+function renderPanel() {
+  const r = S.res, { R, I, A0, A1 } = r, L = lbl(), lv = S.tab, k0 = R.k0, k1 = R.k1, base = Math.abs(R.L1.m0);
+  let h = '', draws = [];
+  const wf = (bars, b) => { const id = 'f' + Math.random().toString(36).slice(2, 8); draws.push([id, waterfall(bars, b)]); return legend(L) + '<div class="fig" id="' + id + '"></div>'; };
+  if (lv === 1) {
+    h += head(I.lv[1].title, L) + '<div class="two"><div>' + wf(bridgeBars(R, 1, L), base) + '</div>' + takeaways(I.lv[1]) + '</div>';
+    const dl = (f, d) => (d > 0 ? '+' : d < 0 ? '−' : '±') + f(Math.abs(d));
+    const row = (n, a, b, f, inv) => tr([n, esc(f(a)), esc(f(b)), '<span class="' + cls(inv ? a - b : b - a) + '">' + esc(dl(f, b - a)) + '</span>', a ? esc(SP((b - a) / Math.abs(a))) : '']);
+    const n2 = v => E.nf2.format(v);
+    const rows = [row('Doanh thu thuần', A0.net, A1.net, M), row('Số bill (TC)', A0.tc, A1.tc, E.n0), row('Giá trị bill TB (TA)', k0.ta, k1.ta, M), row('Số món/bill (UPT)', k0.upt, k1.upt, n2), row('Giá TB/món niêm yết (chưa VAT)', k0.ipList, k1.ipList, M), tr(['Tỷ lệ giảm giá' + (A1.discEst ? ' (ước tính)' : ''), esc(P(k0.discPct)), esc(P(k1.discPct)), esc(E.pp(k0.discPct, k1.discPct)), ''])];
+    if (r.profit) rows.push(row('Giá vốn NVL', A0.food, A1.food, M, 1), row('Hoa hồng app', A0.comm, A1.comm, M, 1), row('Lãi gộp', R.L1.m0, R.L1.m1, M));
+    h += '<div class="tools"><b>Chỉ số chính</b></div>' + table(['Chỉ tiêu', esc(L.p0), esc(L.p1), 'Chênh lệch', 'Δ%'], rows);
+  } else if (lv === 2) {
+    const dp = S.dim === 'dp' && R.L2dp, B = dp ? R.L2dp : R.L2;
+    h += head(I.lv[2].title, L) + '<div class="tools"><span class="seg" id="dimSeg"><button data-d="ch" class="' + (!dp ? 'on' : '') + '">Theo kênh</button><button data-d="dp" class="' + (dp ? 'on' : '') + '"' + (R.L2dp ? '' : ' disabled title="Cần Time Sales cả 2 kỳ"') + '>Theo khung giờ</button></span></div>';
+    const bars = dp ? [{ l: L.p0, v: B.T.m0, t: 'base' }, { l: 'Số bill', v: B.T.traffic }, { l: 'Cơ cấu khung giờ', v: B.T.mix }, { l: 'Bill cùng khung', v: B.T.check }].concat(R.profit ? [{ l: 'Chi phí', v: B.T.cost }] : []).concat([{ l: L.p1, v: B.T.m1, t: 'cur' }]) : bridgeBars(R, 2, L);
+    h += '<div class="two"><div>' + wf(bars, base) + '</div>' + takeaways(I.lv[2]) + '</div>';
+    const rows = B.rows.slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)), mx = Math.max(...rows.map(x => Math.abs(x.delta)), 1), sh0 = B.T.tc0, sh1 = B.T.tc1;
+    h += '<div class="tools"><b>' + (dp ? 'Theo khung giờ' : 'Theo kênh') + '</b><span class="hint">Sắp theo mức chênh lệch</span></div>' +
+      table([dp ? 'Khung giờ' : 'Kênh', 'Bill ' + esc(L.p0), 'Bill ' + esc(L.p1), 'Tỷ trọng bill', 'TA ' + esc(L.p0), 'TA ' + esc(L.p1), 'Số bill', 'Mix', 'Bill cùng ' + (dp ? 'khung' : 'kênh')].concat(R.profit ? ['Chi phí'] : []).concat(['Chênh lệch', '']),
+        rows.map(x => tr([esc(x.key) + (x.flag ? ' <span class="hint">(' + (x.flag === 'new' ? 'mới' : 'ngừng') + ')</span>' : ''), E.n0(x.tc0), E.n0(x.tc1), esc(P(E.div(x.tc0, sh0))) + ' → ' + esc(P(E.div(x.tc1, sh1))), esc(M(x.ta0)), esc(M(x.ta1)), sg(x.traffic), sg(x.mix), sg(x.check)].concat(R.profit ? [sg(x.cost)] : []).concat([sg(x.delta), vbar(x.delta, mx)]))),
+        tr(['Tổng', E.n0(B.T.tc0), E.n0(B.T.tc1), '', esc(M(E.div(A0.net, B.T.tc0))), esc(M(E.div(A1.net, B.T.tc1))), sg(B.T.traffic), sg(B.T.mix), sg(B.T.check)].concat(R.profit ? [sg(B.T.cost)] : []).concat([sg(B.T.delta), '']), 'tot'));
+    if (A0.hasTime && A1.hasTime) {
+      const hrs = [...new Set(Object.keys(A0.hours).concat(Object.keys(A1.hours)).map(Number))].sort((a, b) => a - b), id = 'hc';
+      draws.push([id, groupBars(hrs.map(x => x + 'h'), hrs.map(x => (A0.hours[x] || { net: 0 }).net / A0.days), hrs.map(x => (A1.hours[x] || { net: 0 }).net / A1.days), M)]);
+      h += '<div class="tools"><b>Doanh thu theo giờ, trung bình mỗi ngày</b>' + legend2(L) + '</div><div class="fig sm" id="' + id + '"></div>';
+    }
+  } else if (lv === 3) {
+    h += head(I.lv[3].title, L) + '<div class="two"><div>' + wf(bridgeBars(R, 3, L), base) + '</div>' + takeaways(I.lv[3]) + '</div>';
+    const d0 = A0.dates.filter(d => A0.daily[d]).map(d => ({ d, v: A0.daily[d].net })), d1 = A1.dates.filter(d => A1.daily[d]).map(d => ({ d, v: A1.daily[d].net }));
+    if (d0.length > 1 || d1.length > 1) { draws.push(['dc', lines(d0, d1, M)]); h += '<div class="tools"><b>Doanh thu theo ngày trong kỳ</b>' + legend2(L) + '<span class="hint">Trục ngang: ngày thứ n của kỳ</span></div><div class="fig sm" id="dc"></div>'; }
+    const rows = [['Số ngày mở cửa', A0.days, A1.days, E.n0], ['Bill/ngày', k0.tcDay, k1.tcDay, E.n1], ['Doanh thu/ngày', k0.netDay, k1.netDay, M], ['Khách tại chỗ', A0.guestsDI, A1.guestsDI, E.n0], ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, v => E.nf2.format(v)], ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, M], ['Vòng quay ghế (khách/ghế/ngày)', k0.turnover, k1.turnover, v => E.nf2.format(v)], ['Doanh thu/ghế/ngày', k0.seatDay, k1.seatDay, M]]
+      .filter(x => x[1] != null && x[2] != null).map(x => tr([x[0], esc(x[3](x[1])), esc(x[3](x[2])), '<span class="' + cls(x[2] - x[1]) + '">' + esc(SP(E.div(x[2] - x[1], x[1]))) + '</span>']));
+    h += '<div class="tools"><b>Công suất và năng suất</b>' + (S.cfg.seats ? '' : '<span class="hint">Nhập số ghế ở bước 1 để có vòng quay ghế</span>') + '</div>' + table(['Chỉ số', esc(L.p0), esc(L.p1), 'Δ%'], rows);
+  } else if (lv === 4) {
+    if (!(A0.hasDish && A1.hasDish)) h += '<div class="empty">Cần Dish Sales cả 2 kỳ để phân tích menu.</div>';
+    else h += menuPanel(L, draws);
+  } else {
+    const sc = r.sc, dot = s => s ? '<span title="' + ({ g: 'Tốt', a: 'Theo dõi', r: 'Cần xử lý' })[s] + '" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + ({ g: 'var(--pos)', a: '#d99a2b', r: 'var(--neg)' })[s] + '"></span>' : '';
+    h += head('Operating scorecard: ' + sc.filter(x => x.st === 'r').length + ' red, ' + sc.filter(x => x.st === 'a').length + ' amber, ' + sc.filter(x => x.st === 'g').length + ' green', L, ' · ngưỡng đỏ ' + S.cfg.thr + '% hoặc 1 điểm %');
+    h += table(['Chỉ số', esc(L.p0), esc(L.p1), 'Chênh lệch', 'Kế hoạch', 'Trạng thái'], sc.map(x => tr([esc(x.name), x.a == null ? '–' : esc(x.f(x.a)), x.b == null ? '–' : esc(x.f(x.b)), x.a == null || x.b == null ? '' : '<span class="' + (x.good ? cls(x.good * x.d) : '') + '">' + esc(x.kind === 'pts' ? E.pp(x.a, x.b) : SP(x.rel)) + '</span>', x.plan == null ? '' : esc(x.f(x.plan)) + ' <span class="hint">(' + esc(x.kind === 'pts' ? E.pp(x.plan, x.b) : P(x.b / x.plan)) + ')</span>', dot(x.st)])));
+    h += '<div class="note"><span>Xanh: tốt hơn hoặc đạt kế hoạch. Vàng: xấu đi dưới ngưỡng. Đỏ: xấu đi từ ngưỡng trở lên hoặc đạt dưới 95% kế hoạch.</span></div>';
+  }
+  if (lv <= 3) h += '<div class="note"><span>Trục không bắt đầu từ 0 (có dấu ngắt), cột tổng chỉ để so sánh mức chênh lệch.</span><span>Số nhỏ dưới mỗi cột: % so với kỳ so sánh.</span></div>';
+  $('panel').innerHTML = h;
+  draws.forEach(([id, fn]) => { const el = $(id); if (el) mount(el, fn); });
+}
+function menuPanel(L, draws) {
+  const { R, A0, A1 } = S.res, Mn = R.menu, mv = S.mv;
+  let h = head('Menu: ' + (Math.abs(Mn.T.price) > Math.abs(Mn.T.vol + Mn.T.mix) ? 'price moves outweigh volume' : 'volume and mix drive the menu result'), L, ' · ' + (R.profit ? 'lãi gộp món (chưa trừ hoa hồng)' : 'doanh thu thuần theo món'));
+  h += '<div class="tools"><span class="seg" id="mvSeg">' + [['cat', 'Nhóm món'], ['dish', 'Món'], ['eng', 'Ma trận menu'], ['promo', 'Combo & KM']].map(x => '<button data-m="' + x[0] + '" class="' + (mv === x[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</span></div>';
+  const base = Math.abs(Mn.T.m0), mc = R.profit && Math.abs(Mn.T.cost) > 1;
+  if (mv === 'cat' || mv === 'dish') {
+    const bars = [{ l: L.p0, v: Mn.T.m0, t: 'base' }, { l: 'Sản lượng', v: Mn.T.vol }, { l: 'Cơ cấu món', v: Mn.T.mix }, { l: 'Giá thực thu', v: Mn.T.price }].concat(mc ? [{ l: 'Giá vốn/món', v: Mn.T.cost }] : []).concat([{ l: L.p1, v: Mn.T.m1, t: 'cur' }]);
+    draws.push(['mf', waterfall(bars, base)]);
+    const cats = Mn.cats.slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)), top = cats.slice(0, 3);
+    h += '<div class="two"><div>' + legend(L) + '<div class="fig" id="mf"></div></div><div class="take"><h4>Key takeaways</h4><ul class="bl">' +
+      top.map(c => '<li><b>' + esc(c.cat) + '.</b> ' + rich('Chênh lệch **' + SM(c.delta) + '**: sản lượng ' + SM(c.vol) + ', cơ cấu ' + SM(c.mix) + ', giá ' + SM(c.price) + '.') + '</li>').join('') +
+      '</ul><div class="acts2"><b>Cách đọc</b><ul><li>Sản lượng: bán nhiều hay ít món hơn trong cùng nhóm.</li><li>Cơ cấu món: khách chuyển sang món đắt hay rẻ hơn trong nhóm.</li><li>Giá thực thu: giá sau giảm giá, đã gồm đổi giá menu.</li></ul></div></div></div>';
+    if (mv === 'cat') {
+      const mx = Math.max(...cats.map(c => Math.abs(c.delta)), 1);
+      h += '<div class="tools"><b>Theo nhóm món</b></div>' + table(['Nhóm món', 'SL ' + esc(L.p0), 'SL ' + esc(L.p1), esc(L.p0), esc(L.p1), 'Sản lượng', 'Cơ cấu', 'Giá'].concat(mc ? ['Giá vốn'] : []).concat(['Chênh lệch', '']),
+        cats.map(c => tr([esc(c.cat), E.n0(c.q0), E.n0(c.q1), esc(M(c.m0)), esc(M(c.m1)), sg(c.vol), sg(c.mix), sg(c.price)].concat(mc ? [sg(c.cost)] : []).concat([sg(c.delta), vbar(c.delta, mx)]))),
+        tr(['Tổng', '', '', esc(M(Mn.T.m0)), esc(M(Mn.T.m1)), sg(Mn.T.vol), sg(Mn.T.mix), sg(Mn.T.price)].concat(mc ? [sg(Mn.T.cost)] : []).concat([sg(Mn.T.delta), '']), 'tot'));
+    } else {
+      const ds = Mn.dishes.filter(d => Math.abs(d.delta) > 0).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)), full = S.expand.dish, shown = full ? ds : ds.slice(0, 15), mx = Math.max(...ds.map(d => Math.abs(d.delta)), 1);
+      h += '<div class="tools"><b>Món biến động nhất</b><span class="hint">' + ds.length + ' món có thay đổi</span></div>' + table(['Món', 'Nhóm', 'SL ' + esc(L.p0), 'SL ' + esc(L.p1), 'Giá TT ' + esc(L.p0), 'Giá TT ' + esc(L.p1), 'Sản lượng', 'Cơ cấu', 'Giá', 'Chênh lệch', ''],
+        shown.map(d => tr([esc(d.name), esc(d.cat), E.n0(d.q0), E.n0(d.q1), esc(M(E.div(d.n0, d.q0))), esc(M(E.div(d.n1, d.q1))), sg(d.vol), sg(d.mix), sg(d.price + d.cost), sg(d.delta), vbar(d.delta, mx)])),
+        !full && ds.length > 15 ? '<tr><td colspan="11" class="l"><button class="btn ghost sm" id="moreDish">Xem tất cả ' + ds.length + ' món</button></td></tr>' : '');
+    }
+  } else if (mv === 'eng') {
+    const e = Mn.eng, q = { Star: [], Plowhorse: [], Puzzle: [], Dog: [] };
+    e.items.forEach(i => q[i.quad].push(i)); Object.keys(q).forEach(k => q[k].sort((a, b) => b.n - a.n));
+    draws.push(['sc', scatter(e.items, e.popT, e.avgM)]);
+    const tip = { Star: 'Giữ nguyên chất lượng, đặt vị trí nổi bật trên menu.', Plowhorse: 'Bán chạy nhưng lãi thấp: tăng giá nhẹ hoặc xem lại định lượng.', Puzzle: 'Lãi cao nhưng ít bán: đẩy giới thiệu, đổi vị trí, đưa vào combo.', Dog: 'Ít bán, lãi thấp: cân nhắc loại khỏi menu.' };
+    h += '<div class="two"><div><div class="fig" id="sc" style="min-height:380px"></div><p class="hint">' + (e.byMargin ? 'Trục dọc: lãi gộp mỗi món (giá thực thu trừ giá vốn).' : 'Chưa có giá vốn: trục dọc tạm dùng giá thực thu mỗi món.') + ' Ngưỡng phổ biến = 70% × 1/' + e.items.length + ' món. Kỳ ' + esc(L.p1) + '.</p></div><div class="quad">' +
+      Object.keys(q).map(k => '<div><b>' + k + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
+  } else {
+    const names = [...new Set(Object.keys(A0.promo).concat(Object.keys(A1.promo)))].map(n => ({ n, a: (A0.promo[n] || { n: 0 }).n, b: (A1.promo[n] || { n: 0 }).n, qa: (A0.promo[n] || { q: 0 }).q, qb: (A1.promo[n] || { q: 0 }).q })).sort((x, y) => y.b - x.b);
+    const t0 = A0.promoTotal || A0.net, t1 = A1.promoTotal || A1.net;
+    if (!A0.hasPromo || !A1.hasPromo) h += '<div class="empty">Cần báo cáo Promotion cả 2 kỳ.</div>';
+    else {
+      const spf = x => names.filter(n => /^SPF_/i.test(n.n)).reduce((s, n) => s + n[x], 0);
+      h += '<ul class="bl" style="margin-bottom:12px"><li><b>Doanh thu qua combo/khuyến mãi.</b> ' + esc(P(A0.promoNet / t0)) + ' → ' + esc(P(A1.promoNet / t1)) + ' doanh thu (' + esc(SM(A1.promoNet - A0.promoNet)) + ').</li><li><b>Deal ShopeeFood (SPF_).</b> ' + esc(M(spf('a'))) + ' → ' + esc(M(spf('b'))) + '.</li></ul>' +
+        table(['Combo / chương trình', 'SL ' + esc(L.p0), 'SL ' + esc(L.p1), esc(L.p0), esc(L.p1), 'Chênh lệch', 'Tỷ trọng ' + esc(L.p1)], names.map(x => tr([esc(x.n), E.n0(x.qa), E.n0(x.qb), esc(M(x.a)), esc(M(x.b)), sg(x.b - x.a), esc(P(x.b / t1))])), tr(['Không qua combo/KM', '', '', esc(M(t0 - A0.promoNet)), esc(M(t1 - A1.promoNet)), sg((t1 - A1.promoNet) - (t0 - A0.promoNet)), esc(P((t1 - A1.promoNet) / t1))], 'tot'));
+    }
+  }
+  return h;
+}
+
+/* ---------------- page 3: report ---------------- */
+function defaultActions() {
+  const { I } = S.res, d = new Date(), nx = new Date(d.getFullYear(), d.getMonth() + 2, 0), due = String(nx.getDate()).padStart(2, '0') + '/' + String(nx.getMonth() + 1).padStart(2, '0');
+  return I.acts.slice(0, 5).map(a => [a.t, 'Quản lý nhà hàng', due, a.v < 0 ? 'Thu hồi ~' + M(Math.abs(a.v) / 2) + '/tháng' : 'Giữ ' + SM(a.v)]);
+}
+function summaryText() {
+  const { R, I, A0, A1 } = S.res, L = lbl(), k0 = R.k0, k1 = R.k1, pl = S.cfg.plan, dv = I.drivers.slice(0, 3);
+  const red = S.res.sc.filter(x => x.st === 'r').map(x => x.name.replace(/ \(.*\)$/, '')).slice(0, 3);
+  let t = '[' + restaurantName() + '] Báo cáo ' + L.p1 + '\n';
+  t += (R.profit ? 'Lãi gộp ' + M(R.L1.m1) + ' (' + SP(E.div(R.L1.delta, Math.abs(R.L1.m0))) + '). ' : '') + 'Doanh thu thuần ' + M(A1.net) + ' (' + SP(E.div(A1.net - A0.net, A0.net)) + ' so với ' + L.p0 + (pl.net ? ', đạt ' + P(A1.net / pl.net) + ' KH' : '') + '). ' + E.n0(A1.tc) + ' bill (' + SP(E.div(A1.tc - A0.tc, A0.tc)) + '), TA ' + M(k1.ta) + ' (' + SP(E.div(k1.ta - k0.ta, k0.ta)) + ').\n';
+  t += 'Nguyên nhân: ' + (dv.length ? dv.map(d => E.VN[d[0]] + ' ' + SM(d[1])).join('; ') : 'không có thay đổi đáng kể') + '.\n';
+  if (red.length) t += 'Cần lưu ý: ' + red.join(', ') + '.\n';
+  const acts = (S.cfg.actions || []).filter(a => a[0]).slice(0, 3);
+  if (acts.length) t += 'Tháng tới: ' + acts.map((a, i) => (i + 1) + ') ' + a[0].replace(/[:;].*$/, '')).join(' ') ;
+  return t.trim();
+}
+function renderReport() {
+  const r = S.res; if (!r) return;
+  const { R, I, A0, A1 } = r, L = lbl(), k0 = R.k0, k1 = R.k1, pl = S.cfg.plan, T = R.L1, today = new Date();
+  $('sumTxt').value = summaryText();
+  const k4 = [['Doanh thu thuần', M(A1.net), SP(E.div(A1.net - A0.net, A0.net))], pl.net ? ['Đạt kế hoạch', P(A1.net / pl.net), M(A1.net - pl.net)] : ['Số bill', E.n0(A1.tc), SP(E.div(A1.tc - A0.tc, A0.tc))], ['Giá trị bill TB', M(k1.ta), SP(E.div(k1.ta - k0.ta, k0.ta))], r.profit ? ['Biên lãi gộp', P(k1.gmPct), E.pp(k0.gmPct, k1.gmPct)] : ['Số món/bill', E.nf2.format(k1.upt), SP(E.div(k1.upt - k0.upt, k0.upt))]];
+  const causes = I.drivers.slice(0, 3).map(d => ({ h: E.VN[d[0]], t: I.why[d[0]](d[1]) }));
+  const issues = r.sc.filter(x => x.st === 'r').slice(0, 4).map(x => x.name + ': ' + (x.a != null ? x.f(x.a) + ' → ' : '') + x.f(x.b) + (x.plan != null ? ' (KH ' + x.f(x.plan) + ')' : '')).concat(r.notes.filter(n => n.lv === 'warn').slice(0, 2).map(n => n.h));
+  const band = (pg) => '<div class="band"><div>' + esc(restaurantName()) + ' · Báo cáo kết quả kinh doanh ' + esc(L.p1) + '<br><small>So với ' + esc(L.p0) + ' (' + esc(S.cfg.kind) + ')</small></div><small>Lập ngày ' + today.toLocaleDateString('vi-VN') + ' · Trang ' + pg + '/2</small></div>';
+  const acts = S.cfg.actions || [];
+  let s1 = '<div class="sheet" id="sh1">' + band(1) + '<h2>' + esc(I.title) + '</h2><div class="k4">' + k4.map(k => '<div><small>' + esc(k[0]) + '</small><b>' + esc(k[1]) + '</b><em class="' + (/^[+]/.test(k[2]) ? 'p' : /^−/.test(k[2]) ? 'm' : '') + '">' + esc(k[2]) + '</em></div>').join('') + '</div>' +
+    '<div class="cols"><div><h4>Cầu nối ' + (r.profit ? 'lãi gộp' : 'doanh thu') + ' ' + esc(L.p0) + ' → ' + esc(L.p1) + '</h4>' + legend(L) + '<div class="fig" id="rf"></div></div><div><h4>Nguyên nhân chính</h4><ul class="bl">' + causes.map(c => '<li><b>' + esc(c.h) + '.</b> ' + rich(c.t) + '</li>').join('') + '</ul><h4>Vấn đề cần lưu ý</h4><ul class="bl">' + (issues.length ? issues.map(x => '<li>' + esc(x) + '</li>').join('') : '<li>Không có chỉ số ở mức đỏ.</li>') + '</ul></div></div>' +
+    '<h4>Kế hoạch hành động tháng tới</h4><table id="actTb"><thead><tr><th class="l" style="width:52%">Hành động</th><th class="l">Phụ trách</th><th class="l">Hạn</th><th class="l">Tác động kỳ vọng</th><th class="noprint"></th></tr></thead><tbody>' +
+    acts.map((a, i) => '<tr>' + a.map((c, j) => '<td contenteditable="true" data-a="' + i + ':' + j + '">' + esc(c) + '</td>').join('') + '<td class="noprint"><button class="x" data-arm="' + i + '" aria-label="Xóa hành động">×</button></td></tr>').join('') + '</tbody></table>' +
+    '<div class="foot"><span>Nguồn: POS Dish Sales, Order Type, Time Sales, Promotion' + (A1.discEst ? ' · giảm giá ước tính' : '') + '</span><span>Các hiệu ứng cộng đúng bằng chênh lệch ' + (R.ok ? '✓' : '!') + '</span></div></div>';
+  const chRows = R.L2.rows.slice().sort((a, b) => b.net1 - a.net1);
+  let s2 = '<div class="sheet" id="sh2">' + band(2) + '<h2>Phụ lục: kênh, công suất và KPI</h2><div class="cols"><div><h4>Theo kênh (Level 02)</h4><table><thead><tr><th class="l">Kênh</th><th>Bill</th><th>TA</th><th>Doanh thu</th><th>Mix</th><th>Bill cùng kênh</th><th>Chênh lệch</th></tr></thead><tbody>' +
+    chRows.map(x => '<tr><td class="l">' + esc(x.key) + '</td><td>' + E.n0(x.tc0) + ' → ' + E.n0(x.tc1) + '</td><td>' + esc(M(x.ta1)) + '</td><td>' + esc(M(x.net1)) + '</td><td>' + sg(x.mix) + '</td><td>' + sg(x.check) + '</td><td>' + sg(x.delta) + '</td></tr>').join('') + '</tbody></table>' +
+    '<h4>Công suất (Level 03)</h4><table><tbody>' + [['Số ngày mở cửa', A0.days + ' → ' + A1.days, SM(R.L3.days)], ['Bill/ngày', E.n1(k0.tcDay) + ' → ' + E.n1(k1.tcDay), SM(R.L3.prod)]].concat(k1.turnover != null ? [['Vòng quay ghế', (k0.turnover != null ? E.nf2.format(k0.turnover) + ' → ' : '') + E.nf2.format(k1.turnover), '']] : []).map(x => '<tr><td class="l">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td><td>' + (x[2] ? '<span class="' + (x[2].charAt(0) === '−' ? 'm' : 'p') + '">' + esc(x[2]) + '</span>' : '') + '</td></tr>').join('') + '</tbody></table>' +
+    (S.cfg.events.length ? '<h4>Nhật ký sự kiện</h4><ul class="bl">' + S.cfg.events.map(e => '<li><b>' + esc(e[0]) + '.</b> ' + esc(e[1]) + '</li>').join('') + '</ul>' : '') +
+    '</div><div><h4>Scorecard</h4><table><thead><tr><th class="l">Chỉ số</th><th>' + esc(L.p0) + '</th><th>' + esc(L.p1) + '</th><th>Δ</th><th></th></tr></thead><tbody>' +
+    r.sc.slice(0, 17).map(x => '<tr><td class="l">' + esc(x.name) + '</td><td>' + (x.a == null ? '–' : esc(x.f(x.a))) + '</td><td>' + (x.b == null ? '–' : esc(x.f(x.b))) + '</td><td>' + (x.a == null || x.b == null ? '' : esc(x.kind === 'pts' ? E.pp(x.a, x.b).replace(' điểm %', 'đ%') : SP(x.rel))) + '</td><td>' + (x.st ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + ({ g: 'var(--pos)', a: '#d99a2b', r: 'var(--neg)' })[x.st] + '"></span>' : '') + '</td></tr>').join('') + '</tbody></table></div></div>' +
+    '<div class="foot"><span>W = ' + (r.profit ? 'lãi gộp' : 'doanh thu') + ' mỗi bill kỳ so sánh · TA = doanh thu thuần ÷ số bill · số liệu chưa gồm VAT</span><span>Restaurant Performance Report</span></div></div>';
+  $('sheets').innerHTML = s1 + s2;
+  mount($('rf'), waterfall(bridgeBars(R, 1, L), Math.abs(R.L1.m0)));
+}
+
+/* ---------------- Claude ---------------- */
+function aiCtx() {
+  const { R, A0, A1, I } = S.res, L = lbl();
+  const r0 = x => Math.round(x);
+  return JSON.stringify({
+    nha_hang: restaurantName(), ky_so_sanh: L.p0, ky_hien_tai: L.p1, loai_so_sanh: S.cfg.kind, che_do: R.profit ? 'lãi gộp' : 'doanh thu thuần',
+    tong: { m0: r0(R.L1.m0), m1: r0(R.L1.m1), chenh_lech: r0(R.L1.delta) },
+    kpi_ky_so_sanh: R.k0, kpi_ky_hien_tai: R.k1, ke_hoach: S.cfg.plan,
+    level1: { so_bill: r0(R.L1.traffic), so_mon_bill: r0(R.L1.upt), gia_mon: r0(R.L1.price), giam_gia: r0(R.L1.disc), gia_von: r0(R.L1.food), hoa_hong: r0(R.L1.comm) },
+    level2_kenh: R.L2.rows.map(x => ({ kenh: x.key, bill0: x.tc0, bill1: x.tc1, ta0: r0(x.ta0), ta1: r0(x.ta1), mix: r0(x.mix), bill_cung_kenh: r0(x.check), chenh_lech: r0(x.delta) })),
+    level2_khung_gio: R.L2dp ? R.L2dp.rows.map(x => ({ khung: x.key, bill0: x.tc0, bill1: x.tc1, chenh_lech: r0(x.delta) })) : null,
+    level3: { so_ngay0: A0.days, so_ngay1: A1.days, hieu_ung_so_ngay: r0(R.L3.days), hieu_ung_bill_ngay: r0(R.L3.prod) },
+    nhom_mon: R.menu.cats.map(c => ({ nhom: c.cat, chenh_lech: r0(c.delta), san_luong: r0(c.vol), co_cau: r0(c.mix), gia: r0(c.price) })),
+    giam_gia_uoc_tinh: A1.discEst, nhat_ky_su_kien: S.cfg.events, canh_bao: S.res.notes.filter(n => n.lv === 'warn').map(n => n.h), y_chinh_hien_tai: I.bullets.map(b => plain(b.t))
+  });
+}
+const KEY = 'rpr.claude';
+function apiCfg() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+async function callClaude(prompt) {
+  const c = apiCfg();
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': c.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: c.model || 'claude-sonnet-5-5', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] }) });
+  if (!r.ok) { let m = ''; try { m = (await r.json()).error.message; } catch (e) { } throw { code: r.status === 429 || r.status === 529 ? 'rate_limited' : r.status === 401 ? 'bad_key' : 'http', message: m }; }
+  const j = await r.json(); return { text: (j.content || []).map(x => x.text || '').join('') };
+}
+function initClaude() {
+  const c = apiCfg();
+  S.sm = c.key ? callClaude : null;
+  $('ai').hidden = !S.sm; $('askbox').hidden = !S.sm;
+  $('apiKey').value = c.key ? '••••••••' + c.key.slice(-4) : ''; $('apiModel').value = c.model || 'claude-sonnet-5-5';
+  $('apiStat').textContent = c.key ? 'Đã lưu khóa API trên trình duyệt này. Nút Claude đã bật ở trang Phân tích.' : 'Chưa có khóa API: các nút Claude được ẩn, mọi tính năng khác vẫn chạy bình thường.';
+}
+$('apiSave').onclick = () => { const k = $('apiKey').value.trim(), c = apiCfg(); if (k && !/^•/.test(k)) c.key = k; c.model = $('apiModel').value.trim() || 'claude-sonnet-5-5'; try { localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) { } initClaude(); toast('Đã lưu cài đặt Claude'); };
+$('apiDel').onclick = () => { try { localStorage.removeItem(KEY); } catch (e) { } initClaude(); toast('Đã xóa khóa API'); };
+$('ai').onclick = async function () {
+  if (!S.sm || !S.res) return; const btn = this; btn.disabled = true; btn.textContent = 'Claude đang viết…';
+  const prompt = 'Bạn là quản lý nhà hàng, viết nhận xét gửi Giám đốc vận hành. Từ dữ liệu JSON dưới đây, viết 3 ý chính bằng tiếng Việt. Mỗi ý gồm "h" (tiêu đề dưới 7 từ) và "t" (1–2 câu, dưới 40 từ). Dùng ĐÚNG các con số trong JSON, viết tiền dạng 12,3 tr hoặc 1,25 tỷ, bọc số tiền tác động trong **…** kèm dấu + hoặc −. Liên hệ nhật ký sự kiện nếu có liên quan. Không bịa số. Chỉ trả về mảng JSON [{"h":"…","t":"…"}].\n\nDỮ LIỆU:\n' + aiCtx();
+  try {
+    const r = await S.sm(prompt, { modelTier: 'default' }), m = r && r.text && r.text.match(/\[[\s\S]*\]/), arr = m && JSON.parse(m[0]);
+    if (arr && arr.length && arr[0].h) { const b = arr.slice(0, 4).map(x => ({ h: String(x.h), t: String(x.t) })); S.res.I.bullets = b; renderBullets(b); $('aiInfo').textContent = 'Claude đã viết lại. Vui lòng đối chiếu số liệu trước khi gửi.'; }
+    else $('aiInfo').textContent = 'Claude chưa trả về đúng định dạng, thử lại sau.';
+  } catch (e) { if (e && e.code === 'not_granted') { $('ai').hidden = true; $('askbox').hidden = true; } else $('aiInfo').textContent = e && e.code === 'rate_limited' ? 'Claude đang bận, thử lại sau ít phút.' : e && e.code === 'bad_key' ? 'Khóa API không hợp lệ, kiểm tra lại ở bước 1.' : 'Chưa kết nối được Claude' + (e && e.message ? ': ' + e.message : '.'); }
+  btn.disabled = false; btn.textContent = 'Viết lại nhận xét bằng Claude';
+};
+$('ask').onclick = async function () {
+  const q = $('q').value.trim(); if (!q || !S.sm || !S.res) return; const btn = this; btn.disabled = true;
+  const box = document.createElement('div'); box.className = 'ans'; box.textContent = 'Claude đang trả lời…'; $('ans').replaceChildren(box);
+  const prompt = 'Bạn là chuyên gia vận hành nhà hàng. Trả lời bằng tiếng Việt, tối đa 120 từ, chỉ dựa trên dữ liệu JSON sau và dùng đúng các con số có trong đó. Nếu dữ liệu không đủ thì nói rõ cần thêm dữ liệu gì.\n\nDỮ LIỆU:\n' + aiCtx() + '\n\nCÂU HỎI: ' + q;
+  try { const r = await S.sm(prompt, { modelTier: 'default', cache: false, onText: o => { box.textContent = o.text; } }); if (r && r.text) box.textContent = r.text; }
+  catch (e) { box.textContent = e && e.code === 'rate_limited' ? 'Claude đang bận, thử lại sau ít phút.' : e && e.code === 'bad_key' ? 'Khóa API không hợp lệ.' : 'Chưa kết nối được Claude' + (e && e.message ? ': ' + e.message : '.'); }
+  btn.disabled = false;
+};
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('ask').click(); });
+
+/* ---------------- exports ---------------- */
+async function save(name, blob) {
+  const u = URL.createObjectURL(blob), el = document.createElement('a');
+  el.href = u; el.download = name; document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 5000); toast('Đã tải ' + name);
+}
+function fname(ext) { return 'bao-cao-' + (lbl().p1 || 'ky').replace(/[^\w\-]+/g, '-') + '.' + ext; }
+async function exportXlsx(btn) {
+  if (!S.res) return; btn.disabled = true;
+  try {
+    if (!window.ExcelJS) await loadScript(LIBS.xlsx);
+    const { R, A0, A1 } = S.res, L = lbl(), wb = new window.ExcelJS.Workbook(), pf = R.profit ? 1 : 0;
+    const HD = { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A3516' } } }, MF = '#,##0;[Red]-#,##0';
+    const hdr = (ws, r) => ws.getRow(r).eachCell(c => { c.font = HD.font; c.fill = HD.fill; c.alignment = { wrapText: true, vertical: 'middle' }; });
+    // Level 1 with live formulas
+    const w1 = wb.addWorksheet('L1 Bridge'); w1.columns = [{ width: 40 }, { width: 20 }, { width: 20 }];
+    w1.addRow(['Chỉ tiêu', L.p0, L.p1]); hdr(w1, 1);
+    [['Số bill (TC)', A0.tc, A1.tc], ['Doanh thu thuần', A0.net, A1.net], ['Số món (không gồm bao bì, phí)', A0.items, A1.items], ['Doanh thu theo giá niêm yết (chưa VAT)', A0.listNet, A1.listNet], ['Giá vốn NVL', A0.food, A1.food], ['Hoa hồng app', A0.comm, A1.comm], ['Tính lãi gộp (1 = có)', pf, '']].forEach(r => w1.addRow(r));
+    const f = (fm, v) => ({ formula: fm, result: v });
+    w1.addRow([]);
+    const k0 = R.k0, k1 = R.k1;
+    w1.addRow(['TA', f('B3/B2', k0.ta), f('C3/C2', k1.ta)]);             // r10
+    w1.addRow(['UPT', f('B4/B2', k0.upt), f('C4/C2', k1.upt)]);          // r11
+    w1.addRow(['Giá TB/món niêm yết', f('B5/B4', k0.ipList), f('C5/C4', k1.ipList)]);   // r12
+    w1.addRow(['Tỷ lệ thực thu', f('B3/B5', E.div(A0.net, A0.listNet)), f('C3/C5', E.div(A1.net, A1.listNet))]);   // r13
+    w1.addRow(['Chi phí/bill', f('(B6+B7)/B2*$B$8', pf ? A0.cost / A0.tc : 0), f('(C6+C7)/C2*$B$8', pf ? A1.cost / A1.tc : 0)]);   // r14
+    w1.addRow(['Kết quả (M)', f('B3-(B6+B7)*$B$8', R.L1.m0), f('C3-(C6+C7)*$B$8', R.L1.m1)]);   // r15
+    w1.addRow(['W = M0 / TC0', f('B15/B2', R.L3.W), '']);   // r16
+    w1.addRow([]); w1.addRow(['Hiệu ứng', 'Giá trị', '']); hdr(w1, 18);
+    const T = R.L1;
+    [['Số bill', '(C2-B2)*B16', T.traffic], ['Số món/bill', 'C2*(C11-B11)*B12*B13', T.upt], ['Giá TB/món', 'C2*C11*(C12-B12)*B13', T.price], ['Giảm giá', 'C2*C11*C12*(C13-B13)', T.disc], ['Giá vốn NVL', '-(C6/C2-B6/B2)*C2*$B$8', T.food], ['Hoa hồng app', '-(C7/C2-B7/B2)*C2*$B$8', T.comm]].forEach(r => w1.addRow([r[0], f(r[1], r[2])]));
+    w1.addRow(['Tổng hiệu ứng', f('SUM(B19:B24)', T.delta)]); w1.addRow(['Chênh lệch (M1 − M0)', f('C15-B15', T.delta)]); w1.addRow(['Kiểm tra (phải = 0)', f('ROUND(B25-B26,0)', 0)]);
+    w1.eachRow((row, n) => { if (n > 1) row.eachCell((c, j) => { if (j > 1) c.numFmt = n >= 10 && n <= 13 ? '#,##0.00' : MF; }); });
+    // Level 2 by channel with live formulas
+    const w2 = wb.addWorksheet('L2 Kenh'), H2 = ['Kênh', 'TC0', 'Net0', 'Chi phí0', 'TC1', 'Net1', 'Chi phí1', 'W', 'TCm', 'Số bill', 'Mix', 'Bill cùng kênh', 'Chi phí', 'Chênh lệch'];
+    w2.addRow(H2); hdr(w2, 1); w2.columns = H2.map((h, i) => ({ width: i ? 15 : 22 }));
+    const rows = R.L2.rows, n = rows.length, last = n + 1;
+    rows.forEach((x, i) => {
+      const r = i + 2, c0 = pf ? (A0.ch[x.key] ? A0.ch[x.key].food + A0.ch[x.key].comm : 0) : 0, c1 = pf ? (A1.ch[x.key] ? A1.ch[x.key].food + A1.ch[x.key].comm : 0) : 0;
+      w2.addRow([x.key, x.tc0, x.net0, c0, x.tc1, x.net1, c1,
+        f('IF(B' + r + '=0,IF(E' + r + '=0,0,(F' + r + '-G' + r + ')/E' + r + '),(C' + r + '-D' + r + ')/B' + r + ')', x.tc0 ? (x.net0 - c0) / x.tc0 : x.tc1 ? (x.net1 - c1) / x.tc1 : 0), f('B' + r + '*$E$' + (last + 2) + '/$B$' + (last + 2), x.tc0 * R.L2.T.r),
+        f('(I' + r + '-B' + r + ')*H' + r, x.traffic), f('IF(B' + r + '=0,F' + r + '-G' + r + ',(E' + r + '-I' + r + ')*H' + r + ')', x.mix),
+        f('IF(OR(B' + r + '=0,E' + r + '=0),0,(F' + r + '/E' + r + '-C' + r + '/B' + r + ')*E' + r + ')', x.check), f('IF(OR(B' + r + '=0,E' + r + '=0),0,-(G' + r + '/E' + r + '-D' + r + '/B' + r + ')*E' + r + ')', x.cost), f('(F' + r + '-G' + r + ')-(C' + r + '-D' + r + ')', x.delta)]);
+    });
+    w2.addRow([]);
+    const tot2 = { B: R.L2.T.tc0, C: A0.net, D: pf ? A0.cost : 0, E: R.L2.T.tc1, F: A1.net, G: pf ? A1.cost : 0, J: R.L2.T.traffic, K: R.L2.T.mix, L: R.L2.T.check, M: R.L2.T.cost, N: R.L2.T.delta };
+    const sr = (c) => f('SUM(' + c + '2:' + c + last + ')', tot2[c]);
+    w2.addRow(['Tổng', sr('B'), sr('C'), sr('D'), sr('E'), sr('F'), sr('G'), '', '', sr('J'), sr('K'), sr('L'), sr('M'), sr('N')]);
+    w2.addRow(['Kiểm tra (phải = 0)', '', '', '', '', '', '', '', '', f('ROUND(J' + (last + 2) + '+K' + (last + 2) + '+L' + (last + 2) + '+M' + (last + 2) + '-N' + (last + 2) + ',0)', 0)]);
+    w2.eachRow((row, k) => { if (k > 1) row.eachCell((c, j) => { if (j > 1) c.numFmt = MF; }); });
+    // menu, scorecard, data
+    const w3 = wb.addWorksheet('Menu'); w3.addRow(['Nhóm món', 'SL0', 'SL1', 'M0', 'M1', 'Sản lượng', 'Cơ cấu', 'Giá', 'Giá vốn', 'Chênh lệch']); hdr(w3, 1); w3.columns = [{ width: 24 }].concat(Array(9).fill({ width: 14 }));
+    R.menu.cats.forEach(c => w3.addRow([c.cat, c.q0, c.q1, c.m0, c.m1, c.vol, c.mix, c.price, c.cost, c.delta])); w3.eachRow((row, k) => { if (k > 1) row.eachCell((c, j) => { if (j > 1) c.numFmt = MF; }); });
+    const w4 = wb.addWorksheet('Scorecard'); w4.addRow(['Chỉ số', L.p0, L.p1, 'Kế hoạch', 'Trạng thái']); hdr(w4, 1); w4.columns = [{ width: 34 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 12 }];
+    S.res.sc.forEach(x => w4.addRow([x.name, x.a, x.b, x.plan, ({ g: 'Xanh', a: 'Vàng', r: 'Đỏ' })[x.st] || ''])); w4.eachRow((row, k) => { if (k > 1) [2, 3, 4].forEach(j => { const c = row.getCell(j); c.numFmt = Math.abs(c.value || 0) < 50 ? '0.00' : '#,##0'; }); });
+    const w5 = wb.addWorksheet('Data kenh'); w5.addRow(['Kỳ', 'Kênh', 'Bill', 'Doanh thu thuần', 'Số món', 'Doanh thu niêm yết', 'Giảm giá', 'Giá vốn', 'Hoa hồng']); hdr(w5, 1);
+    [[L.p0, A0], [L.p1, A1]].forEach(([l, A]) => Object.keys(A.ch).forEach(k => { const c = A.ch[k]; w5.addRow([l, k, c.tc, c.net, c.items, c.listNet, c.disc, c.food, c.comm]); }));
+    const w6 = wb.addWorksheet('Data mon'); w6.addRow(['Kỳ', 'Món', 'Nhóm', 'Số lượng', 'Doanh thu thuần', 'Giá vốn']); hdr(w6, 1);
+    [[L.p0, A0], [L.p1, A1]].forEach(([l, A]) => Object.keys(A.dishes).forEach(k => { const d = A.dishes[k]; w6.addRow([l, k, d.cat, d.q, d.n, d.food]); }));
+    [w5, w6].forEach(w => { w.columns.forEach((c, i) => c.width = i < 3 ? 22 : 16); w.eachRow((row, k) => { if (k > 1) row.eachCell((c, j) => { if (typeof c.value === 'number') c.numFmt = '#,##0'; }); }); });
+    wb.calcProperties.fullCalcOnLoad = true;
+    const buf = await wb.xlsx.writeBuffer();
+    await save(fname('xlsx'), new Blob([buf]));
+  } catch (e) { console.error(e); toast('Chưa tạo được file Excel, kiểm tra kết nối mạng'); }
+  btn.disabled = false;
+}
+async function exportPdf(btn) {
+  if (!S.res) return; btn.disabled = true;
+  try {
+    if (S.page !== 3) showPage(3);
+    if (!window.html2canvas) await loadScript(LIBS.h2c);
+    if (!window.jspdf) await loadScript(LIBS.pdf);
+    await document.fonts.ready;
+    const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const sheets = document.querySelectorAll('#sheets .sheet');
+    for (let i = 0; i < sheets.length; i++) {
+      const c = await window.html2canvas(sheets[i], { scale: 2, backgroundColor: '#ffffff', ignoreElements: el => el.classList && el.classList.contains('noprint') });
+      if (i) doc.addPage();
+      const r = c.height / c.width, w = Math.min(297, 210 / r), hgt = w * r; doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', (297 - w) / 2, (210 - hgt) / 2, w, hgt);
+    }
+    await save(fname('pdf'), doc.output('blob'));
+  } catch (e) { console.error(e); toast('Chưa tạo được PDF, kiểm tra kết nối mạng'); }
+  btn.disabled = false;
+}
+async function priceTemplate(btn) {
+  btn.disabled = true;
+  try {
+    if (!window.ExcelJS) await loadScript(LIBS.xlsx);
+    const wb = new window.ExcelJS.Workbook(), ws = wb.addWorksheet('Gia mon'), L = lbl();
+    ws.addRow(['Món', 'Nhóm', 'Giá kỳ so sánh (gồm VAT)', 'Giá kỳ hiện tại (gồm VAT)', 'VAT %', 'Giá vốn/món (chưa VAT)']);
+    ws.getRow(1).eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9C3A5' } }; c.alignment = { wrapText: true }; });
+    const est = [{}, {}], cat = {}, vat = {};
+    [0, 1].forEach(i => ds(i).dish.forEach(r => { if (S.cfg.nonFood.indexOf(r.cat) >= 0 || r.q <= 0 || r.gr <= 0) return; const u = r.gr / r.q; if (!est[i][r.dish] || u > est[i][r.dish]) est[i][r.dish] = u; cat[r.dish] = r.cat; if (r.n > 0) vat[r.dish] = Math.round((r.gr / r.n - 1) * 100); }));
+    Object.keys(cat).sort((a, b) => cat[a].localeCompare(cat[b]) || a.localeCompare(b)).forEach(d => { const p = S.cfg.prices[d] || {}; ws.addRow([d, cat[d], p.l0 || Math.round(est[0][d] || est[1][d] || 0), p.l1 || Math.round(est[1][d] || est[0][d] || 0), p.vat || vat[d] || 8, S.cfg.costs[d] != null ? S.cfg.costs[d] : null]); });
+    ws.columns = [{ width: 44 }, { width: 20 }, { width: 18 }, { width: 18 }, { width: 8 }, { width: 18 }];
+    ws.eachRow((row, n) => { if (n > 1) [3, 4, 6].forEach(j => row.getCell(j).numFmt = '#,##0'); });
+    const g = wb.addWorksheet('Huong dan'); ['Giá đã điền sẵn là giá cao nhất thấy trong dữ liệu (ước tính). Sửa lại theo bảng giá menu thật.', 'Giá vốn/món: theo định lượng, chưa VAT. Để trống nếu chưa có.', 'Lưu file rồi nhập lại bằng nút "Nhập file giá và giá vốn".', 'Kỳ: ' + L.p0 + ' và ' + L.p1].forEach(t => g.addRow([t])); g.getColumn(1).width = 100;
+    await save('gia-mon-va-gia-von.xlsx', new Blob([await wb.xlsx.writeBuffer()]));
+  } catch (e) { toast('Chưa tạo được file mẫu'); }
+  btn.disabled = false;
+}
+async function importPrices(file) {
+  try {
+    const sheets = await readWb(file), rows = sheets[0].rows;
+    let hi = rows.findIndex(r => r.some(v => /^(món|dish)$/i.test(String(v || '').trim()))); if (hi < 0) throw new Error('no header');
+    const H = rows[hi].map(v => String(v || '').toLowerCase()), ci = re => H.findIndex(h => re.test(h));
+    const cD = ci(/^(món|dish)$/), c0 = ci(/so sánh|base|kỳ trước/), c1 = ci(/hiện tại|current/), cV = ci(/^vat/), cC = ci(/giá vốn|cost/), cP = c0 < 0 && c1 < 0 ? ci(/giá|price/) : -1;
+    const pr = {}, co = {};
+    rows.slice(hi + 1).forEach(r => { const d = E.txt(r[cD]); if (!d) return; const l0 = E.num(c0 >= 0 ? r[c0] : cP >= 0 ? r[cP] : null), l1 = E.num(c1 >= 0 ? r[c1] : null), v = E.num(cV >= 0 ? r[cV] : null), c = E.num(cC >= 0 ? r[cC] : null);
+      if (l0 || l1) pr[d] = { l0: l0 || l1, l1: l1 || l0, vat: v != null ? v : 8 }; if (c != null && c > 0) co[d] = c; });
+    S.cfg.prices = pr; S.cfg.costs = co; S.dirty = true; S.cfg.actions = null; persist(); renderInputs();
+    toast('Đã nhập ' + Object.keys(pr).length + ' giá và ' + Object.keys(co).length + ' giá vốn');
+  } catch (e) { toast('Không đọc được file giá. Dùng file mẫu để đúng cột.'); }
+}
+
+/* ---------------- navigation & events ---------------- */
+function showPage(n) {
+  if (n > 1 && (S.dirty || !S.res)) { if (!compute()) { toast('Cần dữ liệu cả 2 kỳ'); n = 1; } }
+  S.page = n;
+  [1, 2, 3].forEach(i => $('p' + i).classList.toggle('on', i === n));
+  document.querySelectorAll('#steps button').forEach(b => { const p = +b.dataset.p; b.classList.toggle('on', p === n); b.disabled = p > 1 && !(hasData(0) && hasData(1)); });
+  if (n === 1) renderInputs(); if (n === 2) renderAnalysis(); if (n === 3) renderReport();
+  $('runbar').hidden = n !== 1;
+  try { history.replaceState(null, '', '#' + ['', 'du-lieu', 'phan-tich', 'bao-cao'][n]); } catch (e) { }
+  window.scrollTo({ top: 0 });
+}
+$('steps').addEventListener('click', e => { const b = e.target.closest('button'); if (b && !b.disabled) showPage(+b.dataset.p); });
+$('runBtn').onclick = () => { S.dirty = true; showPage(2); };
+$('bannerGo').onclick = () => { showPage(1); setTimeout(() => { const d = document.querySelector('[data-drop="0"]'); if (d) d.scrollIntoView({ block: 'center' }); }, 50); };
+const P1 = $('p1');
+P1.addEventListener('click', e => {
+  const d = e.target.closest('[data-drop]'); if (d) { S.target = +d.dataset.drop; $('fileIn').click(); return; }
+  const rm = e.target.closest('[data-rm]'); if (rm) { const [i, j] = rm.dataset.rm.split(':').map(Number); S.per[i].files.splice(j, 1); S.dirty = true; storeData(); renderInputs(); return; }
+  const cl = e.target.closest('[data-clr]'); if (cl) { const i = +cl.dataset.clr; if (S.sample) leaveSample(); else S.per[i].files = []; S.dirty = true; storeData(); renderInputs(); return; }
+  const er = e.target.closest('[data-evrm]'); if (er) { S.cfg.events.splice(+er.dataset.evrm, 1); persist(); renderInputs(); }
+});
+P1.addEventListener('keydown', e => { const d = e.target.closest('[data-drop]'); if (d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); S.target = +d.dataset.drop; $('fileIn').click(); } });
+$('fileIn').onchange = function () { const f = Array.from(this.files || []); this.value = ''; if (f.length) addFiles(f, S.target || 0); };
+P1.addEventListener('dragover', e => { const d = e.target.closest('[data-drop]'); if (d) { e.preventDefault(); d.classList.add('on'); } });
+P1.addEventListener('dragleave', e => { const d = e.target.closest('[data-drop]'); if (d) d.classList.remove('on'); });
+P1.addEventListener('drop', e => { const d = e.target.closest('[data-drop]'); if (!d) return; e.preventDefault(); d.classList.remove('on'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files, +d.dataset.drop); });
+P1.addEventListener('change', e => {
+  const t = e.target, c = S.cfg;
+  if (t.dataset.lbl != null) { c[+t.dataset.lbl ? 'l1' : 'l0'] = t.value; c['_auto' + t.dataset.lbl] = false; }
+  else if (t.id === 'kind') c.kind = t.value;
+  else if (t.dataset.oc != null) c.chanMap[t.dataset.oc] = t.value.trim();
+  else if (t.dataset.cm != null) { const o = +t.dataset.cm ? c.comm1 : c.comm0, v = parseFloat(t.value); if (isFinite(v) && v > 0) o[t.dataset.ch] = v; else delete o[t.dataset.ch]; }
+  else if (t.dataset.dp != null) { const d = c.dayparts[+t.dataset.dp]; d[t.dataset.k] = t.dataset.k === 'name' ? t.value : +t.value; }
+  else if (t.dataset.ev != null) c.events[+t.dataset.ev][+t.dataset.k] = t.value;
+  else if (t.id === 'seats') c.seats = +t.value || 0;
+  else if (t.id === 'area') c.area = +t.value || 0;
+  else if (t.id === 'planNet') c.plan.net = numIn(t.value);
+  else if (t.id === 'planTc') c.plan.tc = numIn(t.value);
+  else if (t.id === 'planFood') c.plan.food = +t.value || 0;
+  else if (t.id === 'thr') c.thr = +t.value || 5;
+  else if (t.id === 'nonFood') c.nonFood = t.value.split(',').map(x => x.trim()).filter(Boolean);
+  else return;
+  S.dirty = true;
+  persist(); renderInputs();
+});
+$('evAdd').onclick = () => { S.cfg.events.push([new Date().toISOString().slice(0, 10), '']); persist(); renderInputs(); };
+$('tplBtn').onclick = function () { priceTemplate(this); };
+$('priceUp').onclick = () => $('priceFile').click();
+$('priceFile').onchange = function () { const f = this.files[0]; this.value = ''; if (f) importPrices(f); };
+$('priceClr').onclick = () => { S.cfg.prices = {}; S.cfg.costs = {}; S.dirty = true; S.cfg.actions = null; persist(); renderInputs(); };
+$('p2').addEventListener('click', e => {
+  const t = e.target.closest('[data-t]'); if (t) { S.tab = +t.dataset.t; renderTabs(); renderPanel(); return; }
+  const n = e.target.closest('[data-n]'); if (n) { S.sel = S.sel === n.dataset.n ? null : n.dataset.n; renderTree(); return; }
+  const d = e.target.closest('#dimSeg button'); if (d && !d.disabled) { S.dim = d.dataset.d; renderPanel(); return; }
+  const m = e.target.closest('#mvSeg button'); if (m) { S.mv = m.dataset.m; renderPanel(); return; }
+  if (e.target.id === 'moreDish') { S.expand.dish = true; renderPanel(); }
+});
+$('tabs').addEventListener('keydown', e => { if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return; S.tab = (S.tab + (e.key === 'ArrowRight' ? 0 : 3)) % 5 + 1; renderTabs(); renderPanel(); const b = document.querySelector('.tb.on'); if (b) b.focus(); });
+$('sheets').addEventListener('input', e => { const c = e.target.closest('[data-a]'); if (!c) return; const [i, j] = c.dataset.a.split(':').map(Number); S.cfg.actions[i][j] = c.textContent; persist(); $('sumTxt').value = summaryText(); });
+$('sheets').addEventListener('click', e => { const b = e.target.closest('[data-arm]'); if (b) { S.cfg.actions.splice(+b.dataset.arm, 1); persist(); renderReport(); } });
+$('actAdd').onclick = () => { (S.cfg.actions = S.cfg.actions || []).push(['', '', '', '']); persist(); renderReport(); };
+$('actReset').onclick = () => { S.cfg.actions = defaultActions(); persist(); renderReport(); };
+$('copySum').onclick = async () => { const t = $('sumTxt').value; try { await navigator.clipboard.writeText(t); toast('Đã copy tóm tắt'); } catch (e) { $('sumTxt').select(); toast('Nhấn Ctrl/Cmd + C để copy'); } };
+['xlsx', 'xlsx2'].forEach(id => $(id).onclick = function () { if (S.dirty) compute(); exportXlsx(this); });
+['pdf', 'pdf2'].forEach(id => $(id).onclick = function () { if (S.dirty) compute(); exportPdf(this); });
+
+/* ---------------- start ---------------- */
+$('sampleBtn').onclick = () => { loadSample(); showPage(2); };
+$('printBtn').onclick = () => { if (S.page !== 3) showPage(3); setTimeout(() => window.print(), 300); };
+(async () => {
+  let saved = null;
+  try { saved = await IDB.get('per'); } catch (e) { }
+  if (saved && saved.some(p => p.files && p.files.length)) { S.sample = false; S.per = saved; S.cfg = loadCfg(); $('banner').hidden = true; }
+  else loadSample();
+  const ok = hasData(0) && hasData(1);
+  const start = { 'du-lieu': 1, 'phan-tich': 2, 'bao-cao': 3 }[location.hash.slice(1)] || (ok ? 2 : 1);
+  showPage(ok ? start : 1);
+  initClaude();
+})();
+}
+</script>
+</body></html>
