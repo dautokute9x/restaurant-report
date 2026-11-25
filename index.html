@@ -469,14 +469,14 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 
   /* ---------------- KPIs ---------------- */
   function kpis(A, profit) {
-    var di = A.ch['Tại chỗ'] || null, app = 0, appTc = 0;
+    var app = 0, appTc = 0;
     keys(A.ch).forEach(function (k) { if (/shopee|grab|xanh|be$|baemin|gojek|app/i.test(k)) { app += A.ch[k].net; appTc += A.ch[k].tc; } });
     return {
       net: A.net, tc: A.tc, ta: div(A.net, A.tc), upt: div(A.items, A.tc), ip: div(A.net, A.items), ipList: div(A.listNet, A.items), guests: A.guests || 0,
       tcDay: div(A.tc, A.days), netDay: div(A.net, A.days), days: A.days,
       discPct: div(A.disc, A.listNet), appShare: div(app, A.net), appTcShare: div(appTc, A.tc),
       promoShare: A.hasPromo ? div(A.promoNet, A.promoTotal || A.net) : null,
-      taDI: di ? div(di.net, di.tc) : null, spendHead: A.guestsDI ? div(A.netDI, A.guestsDI) : null, guestsPerBill: A.tcDI ? div(A.guestsDI, A.tcDI) : null,
+      taDI: A.tcDI ? div(A.netDI, A.tcDI) : null, spendHead: A.guestsDI ? div(A.netDI, A.guestsDI) : null, guestsPerBill: A.tcDI ? div(A.guestsDI, A.tcDI) : null,
       foodPct: A.food ? div(A.food, A.net) : null, commPct: A.comm ? div(A.comm, A.net) : null,
       gm: profit ? A.net - A.cost : null, gmPct: profit ? div(A.net - A.cost, A.net) : null,
       seatDay: A.seats ? div(A.net, A.seats * A.days) : null, turnover: A.seats && A.guestsDI ? div(A.guestsDI, A.seats * A.days) : null
@@ -774,8 +774,8 @@ function loadCfg() { try { const c = JSON.parse(localStorage.getItem(LS)); retur
 const S = { sample: false, per: [{ files: [] }, { files: [] }], cfg: DEF(), res: null, page: 1, tab: 1, dim: 'ch', mv: 'cat', dirty: true, expand: {}, sel: null, dl: null, sm: null };
 const IDB = { open() { return new Promise((ok, no) => { const r = indexedDB.open('rpr', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); },
   async get(k) { const db = await IDB.open(); return new Promise(ok => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); }); },
-  async set(k, v) { const db = await IDB.open(); return new Promise(ok => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = ok; }); } };
-function storeData() { if (S.sample) return; IDB.set('per', S.per.map(p => ({ files: p.files }))).catch(() => { }); }
+  async set(k, v) { const db = await IDB.open(); return new Promise((ok, no) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = t.onabort = () => no(t.error); }); } };   // quota errors arrive as abort
+function storeData() { if (S.sample) return; IDB.set('per', S.per.map(p => ({ files: p.files }))).catch(() => toast('Không lưu được file POS trên trình duyệt này (cửa sổ ẩn danh hoặc hết dung lượng). Mở lại trang sẽ phải thả lại file.')); }
 function persist() { if (S.sample) return; try { localStorage.setItem(LS, JSON.stringify(S.cfg)); } catch (e) { } }
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 3200); }
 function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('load ' + src)); document.head.appendChild(s); }); }
@@ -1365,7 +1365,7 @@ async function exportXlsx(btn) {
     const w3 = wb.addWorksheet('Menu'); w3.addRow(['Nhóm món', 'SL0', 'SL1', 'M0', 'M1', 'Sản lượng', 'Cơ cấu', 'Giá', 'Giá vốn', 'Chênh lệch']); hdr(w3, 1); w3.columns = [{ width: 24 }].concat(Array(9).fill({ width: 14 }));
     R.menu.cats.forEach(c => w3.addRow([c.cat, c.q0, c.q1, c.m0, c.m1, c.vol, c.mix, c.price, c.cost, c.delta])); w3.eachRow((row, k) => { if (k > 1) row.eachCell((c, j) => { if (j > 1) c.numFmt = MF; }); });
     const w4 = wb.addWorksheet('Scorecard'); w4.addRow(['Chỉ số', L.p0, L.p1, 'Kế hoạch', 'Trạng thái']); hdr(w4, 1); w4.columns = [{ width: 34 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 12 }];
-    S.res.sc.forEach(x => w4.addRow([x.name, x.a, x.b, x.plan, ({ g: 'Xanh', a: 'Vàng', r: 'Đỏ' })[x.st] || ''])); w4.eachRow((row, k) => { if (k > 1) [2, 3, 4].forEach(j => { const c = row.getCell(j); c.numFmt = Math.abs(c.value || 0) < 50 ? '0.00' : '#,##0'; }); });
+    S.res.sc.forEach(x => { const row = w4.addRow([x.name, x.a, x.b, x.plan, ({ g: 'Xanh', a: 'Vàng', r: 'Đỏ' })[x.st] || '']); [2, 3, 4].forEach(j => { const c = row.getCell(j); c.numFmt = x.kind === 'pts' ? '0.0%' : Math.abs(c.value || 0) < 50 ? '0.00' : '#,##0'; }); });
     const w5 = wb.addWorksheet('Data kenh'); w5.addRow(['Kỳ', 'Kênh', 'Bill', 'Doanh thu thuần', 'Số món', 'Doanh thu niêm yết', 'Giảm giá', 'Giá vốn', 'Hoa hồng']); hdr(w5, 1);
     [[L.p0, A0], [L.p1, A1]].forEach(([l, A]) => Object.keys(A.ch).forEach(k => { const c = A.ch[k]; w5.addRow([l, k, c.tc, c.net, c.items, c.listNet, c.disc, c.food, c.comm]); }));
     const w6 = wb.addWorksheet('Data mon'); w6.addRow(['Kỳ', 'Món', 'Nhóm', 'Số lượng', 'Doanh thu thuần', 'Giá vốn']); hdr(w6, 1);

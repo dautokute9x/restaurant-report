@@ -33,4 +33,18 @@ const cols = JSON.parse(tpl.replace(/'/g, '"')).map(v => v.toLowerCase());
 const vatRe = new RegExp(html.match(/cV = ci\(\/(.+?)\/\)/)[1]);
 assert.strictEqual(cols.findIndex(h => vatRe.test(h)), 4);
 
+// renamed dine-in channel keeps its average bill
+const rows = [{ d: '2026-11-01', cat: 'Pasta', chk: '1', dish: 'X', oc: 'Dine In', ot: 'Dine In', g: 2, q: 1, n: 100000, gr: 108000 }];
+const k = E.kpis(E.aggregate({ dish: rows }, { chanMap: Object.assign({}, E.CHANNELS, { 'Dine In': 'Dine-in' }) }));
+assert.strictEqual(k.taDI, 100000);
+
+// sample data: every bridge level must add up exactly to the total change
+const s = {};
+new Function(html.split('<script>')[2].split('</script>')[0]).call(s);   // second <script> is the sample
+const X = s.RSample.build();
+const cfg = i => { const pr = {}; for (const d in X.prices) pr[d] = { list: i ? X.prices[d].l1 : X.prices[d].l0, vat: X.prices[d].vat }; return { prices: pr, costs: X.costs, comm: i ? X.comm1 : X.comm0, seats: X.seats }; };
+const A0 = E.aggregate(X.p0, cfg(0)), A1 = E.aggregate(X.p1, cfg(1));
+for (const profit of [false, true]) assert.ok(E.analyze(A0, A1, { profit }).ok, 'bridge sums, profit=' + profit);
+assert.ok(A1.recon.every(r => r.ok), 'sample reports reconcile');
+
 console.log('ok');
