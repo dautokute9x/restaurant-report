@@ -840,7 +840,8 @@ async function readWb(file) {
   if (!window.ExcelJS) await loadScript(LIBS.xlsx);
   const wb = new window.ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
   const out = [];
-  wb.eachSheet(ws => { const rows = []; ws.eachRow({ includeEmpty: true }, (row, n) => { const a = []; for (let i = 1; i <= ws.columnCount; i++) a.push(cv(row.getCell(i).value)); rows[n - 1] = a; }); for (let i = 0; i < rows.length; i++) rows[i] = rows[i] || []; out.push({ name: ws.name, rows }); });
+  // ws.columnCount rescans the whole sheet on every read: read it once, or loading is O(rows²)
+  wb.eachSheet(ws => { const rows = [], nc = ws.columnCount; ws.eachRow({ includeEmpty: true }, (row, n) => { const a = []; for (let i = 1; i <= nc; i++) a.push(cv(row.getCell(i).value)); rows[n - 1] = a; }); for (let i = 0; i < rows.length; i++) rows[i] = rows[i] || []; out.push({ name: ws.name, rows }); });
   return out;
 }
 async function addFiles(list, i) {
