@@ -223,7 +223,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
    <p class="hint" style="margin-top:0">Báo cáo POS không có tiền giảm giá (Gross Sales chỉ là giá đã gồm VAT). Có bảng giá niêm yết thì giảm giá được tính chính xác; có giá vốn thì công cụ chuyển sang phân tích lãi gộp.</p>
    <div class="row"><button class="btn ghost sm" id="tplBtn">Tải file mẫu giá và giá vốn</button><button class="btn ghost sm" id="priceUp">Nhập file giá và giá vốn</button><button class="btn ghost sm" id="priceClr">Xóa bảng giá</button><input type="file" id="priceFile" accept=".xlsx" hidden></div>
    <p class="hint" id="priceStat"></p>
-   <p class="eyebrow">Danh mục không tính là món (bao bì, phí giao)</p>
+   <p class="eyebrow">Danh mục không tính là món (bao bì, phí giao, món thêm như sốt, topping)</p>
    <input id="nonFood" style="width:100%">
   </details>
   <details class="card"><summary>Nhật ký sự kiện <small id="evHint"></small></summary>
@@ -310,7 +310,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
   function div(a, b) { return Math.abs(b) > EPS ? a / b : 0; }
 
   /* ---------------- report detection & parsing ---------------- */
-  var NONFOOD = ['TA Packaging', 'Packaging', 'Delivery Fee'];
+  var NONFOOD = ['TA Packaging', 'Packaging', 'Delivery Fee', 'Add sauce', 'Add Topping'];   // not counted as dishes (items per bill, menu matrix)
   var CHANNELS = { 'Dine In': 'Tại chỗ', 'Take Away': 'Mang đi', 'Now': 'ShopeeFood', 'Grab': 'GrabFood', 'XanhNgonSM': 'Xanh Ngon', 'Online': 'Giao hàng riêng', 'Call Center': 'Giao hàng riêng', 'BeFood': 'BeFood', 'ZaloOSC': 'Giao hàng riêng' };
   var DAYPARTS = [{ name: 'Sáng', from: 6, to: 9 }, { name: 'Trưa', from: 10, to: 14 }, { name: 'Chiều', from: 15, to: 16 }, { name: 'Tối', from: 17, to: 23 }];
   var REPORTS = {
@@ -421,7 +421,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
         if (list < r.n) list = r.n;   // never a negative discount from estimation noise
       }
       var uc = costs[r.dish], fc = 0;
-      if (food && r.q > 0) { if (uc != null) fc = uc * r.q; else if (keys(costs).length && r.n > 0) A.missingCost[r.dish] = 1; }
+      if (r.q > 0) { if (uc != null) fc = uc * r.q; else if (food && keys(costs).length && r.n > 0) A.missingCost[r.dish] = 1; }
       var cm = r.n * (nz(comm[chn]) / 100);
       var S = A.ch[chn] || (A.ch[chn] = { tc: 0, net: 0, gross: 0, items: 0, listNet: 0, disc: 0, food: 0, comm: 0, guests: 0, _c: {} });
       S.net += r.n; S.gross += r.gr; S.listNet += list; S.disc += list - r.n; S.food += fc; S.comm += cm;
@@ -821,14 +821,16 @@ function cfgFor(i) {
 function hasData(i) { return S.per[i].files.some(f => f.type === 'dish' || f.type === 'otype'); }
 function isProfit() { const c = S.cfg; return Object.keys(c.costs).length > 0 || [c.comm0, c.comm1].some(o => Object.values(o).some(v => +v > 0)); }
 function compute() {
-  if (!hasData(0) || !hasData(1)) { S.res = null; return false; }
-  const A0 = E.aggregate(ds(0), cfgFor(0)), A1 = E.aggregate(ds(1), cfgFor(1)), profit = isProfit();
+  const h0 = hasData(0), h1 = hasData(1);
+  if (!h0 && !h1) { S.res = null; return false; }
+  const one = h0 && h1 ? null : +h1, profit = isProfit();   // one period only: analyse it against itself, page 2 shows an overview
+  const A1 = E.aggregate(ds(one == null ? 1 : one), cfgFor(one == null ? 1 : one)), A0 = one == null ? E.aggregate(ds(0), cfgFor(0)) : A1;
   const R = E.analyze(A0, A1, { profit });
   const I = E.insights(R, A0, A1, lbl(), S.cfg.plan);
-  S.res = { A0, A1, R, I, profit };
+  S.res = { A0, A1, R, I, profit, one };
   S.res.notes = notices();
   S.res.sc = scorecard();
-  if (!S.cfg.actions) S.cfg.actions = defaultActions();
+  if (!S.cfg.actions && one == null) S.cfg.actions = defaultActions();
   S.dirty = false;
   return true;
 }
@@ -895,7 +897,7 @@ function autoLabel(i) {
 function notices() {
   const { A0, A1, R } = S.res, L = lbl(), out = [];
   const add = (lv, h, t, items) => out.push({ lv, h, t, items: items || [] });
-  [[A0, L.p0], [A1, L.p1]].forEach(([A, l]) => {
+  (S.res.one != null ? [[A1, S.res.one ? L.p1 : L.p0]] : [[A0, L.p0], [A1, L.p1]]).forEach(([A, l]) => {
     A.recon.forEach(r => { if (!r.ok) add('warn', 'Lệch số giữa các báo cáo (' + l + ')', r.report + ' lệch ' + E.full(r.dNet) + 'đ' + (r.tc !== null ? ' và ' + r.dTc + ' bill' : '') + ' so với Dish Sales. Kiểm tra lại khoảng ngày khi xuất báo cáo.'); });
     const u = Object.keys(A.unknownOC); if (u.length) add('warn', 'Order Category chưa gán kênh (' + l + ')', 'Gán kênh ở bước 1 để tính đúng cơ cấu và hoa hồng.', u);
     if (!A.hasDish) add('warn', 'Thiếu Dish Sales (' + l + ')', 'Không tính được số món, giảm giá, số khách và phân tích menu cho kỳ này.');
@@ -907,6 +909,7 @@ function notices() {
   if (A1.discEst) add('info', 'Giảm giá đang là số ước tính', 'Báo cáo POS không có tiền giảm giá. Công cụ lấy giá bán phổ biến nhất của mỗi món trên từng kênh làm giá niêm yết (app có bảng giá riêng cao hơn tại quầy). Nhập bảng giá menu để có số chính xác hơn.');
   const rs = {}; S.per.forEach(p => p.files.forEach(f => (f.rest || []).forEach(x => rs[x] = 1)));
   if (Object.keys(rs).length > 1) add('warn', 'Có nhiều nhà hàng trong dữ liệu', 'Kết quả đang cộng chung các nhà hàng.', Object.keys(rs));
+  if (S.res.one != null) return out;
   if (A0.dates.length && A1.dates.length && A0.dates[A0.dates.length - 1] >= A1.dates[0] && A1.dates[A1.dates.length - 1] >= A0.dates[0]) add('warn', 'Hai kỳ bị trùng ngày', 'Kỳ so sánh và kỳ hiện tại có ngày chồng nhau. Kiểm tra lại file đã thả vào từng kỳ.');
   if (A0.days !== A1.days) add('info', 'Số ngày mở cửa khác nhau', L.p0 + ': ' + A0.days + ' ngày, ' + L.p1 + ': ' + A1.days + ' ngày. Phần chênh nằm ở hiệu ứng "Số ngày mở cửa" (Level 03). Nếu một kỳ chưa hết tháng, nên xuất kỳ so sánh cùng khoảng ngày (ví dụ 1–24 tháng trước) để so sánh công bằng.');
   const nw = R.L2.rows.filter(r => r.flag === 'new').map(r => r.key), ls = R.L2.rows.filter(r => r.flag === 'lost').map(r => r.key);
@@ -1085,15 +1088,17 @@ function renderInputs() {
 }
 function renderRun() {
   const st = [0, 1].map(i => { let A = null; try { if (hasData(i)) A = E.aggregate(ds(i), cfgFor(i)); } catch (e) { } const l = i ? lbl().p1 : lbl().p0; return '<div><small>' + esc(l) + '</small><b>' + (A ? esc(M(A.net)) + ' · ' + E.n0(A.tc) + ' bill' : 'chưa có dữ liệu') + '</b></div>'; });
-  const ok = hasData(0) && hasData(1);
+  const ok = hasData(0) || hasData(1), both = hasData(0) && hasData(1);
   $('runst').innerHTML = st.join('') + '<div><small>Chế độ</small><b>' + (isProfit() ? 'Lãi gộp' : 'Doanh thu thuần') + '</b></div>';
-  $('runBtn').disabled = !ok; $('runBtn').textContent = ok ? 'Phân tích →' : 'Cần dữ liệu cả 2 kỳ';
+  $('runBtn').disabled = !ok; $('runBtn').textContent = both ? 'Phân tích →' : ok ? 'Xem tổng quan 1 kỳ →' : 'Cần dữ liệu POS';
   $('runbar').hidden = S.page !== 1;
 }
 
 /* ---------------- page 2 ---------------- */
 function renderAnalysis() {
   const r = S.res; if (!r) return;
+  const one = r.one != null; $('tree').parentElement.hidden = one; $('tabs').hidden = one; $('ai').hidden = $('askbox').hidden = one || !S.sm;
+  if (one) return renderSingle();
   const { R, I, A0, A1 } = r, L = lbl(), k0 = R.k0, k1 = R.k1, T = R.L1, pl = S.cfg.plan;
   $('execTag').textContent = (r.profit ? 'Gross profit' : 'Net sales') + ' bridge · ' + L.p0 + ' → ' + L.p1 + ' · ' + restaurantName();
   $('execTitle').textContent = I.title;
@@ -1107,10 +1112,40 @@ function renderAnalysis() {
   if (pl.net) kp.push(['', 'Đạt kế hoạch doanh thu', P(A1.net / pl.net), M(A1.net - pl.net) + ' so với KH']);
   $('kpis').innerHTML = kp.map(x => '<div class="kpi ' + x[0] + '"><small>' + esc(x[1]) + '</small><span><b>' + esc(x[2]) + '</b> ' + (x[3] ? '<em class="' + (x[0] ? '' : cls(x[3].charAt(0) === '−' ? -1 : 1)) + '">' + esc(x[3]) + '</em>' : '') + '</span></div>').join('');
   renderTree();
-  const nt = r.notes;
+  renderNotices(r.notes);
+  renderTabs(); renderPanel();
+}
+function renderNotices(nt) {
   $('notices').innerHTML = '<details class="nts"' + (nt.some(n => n.lv === 'warn') ? ' open' : '') + '><summary><span>Lưu ý về dữ liệu (' + nt.length + ')</span><span class="hint">' + (nt.filter(n => n.lv === 'warn').length ? nt.filter(n => n.lv === 'warn').length + ' cảnh báo' : 'không có cảnh báo') + '</span></summary>' +
     nt.map(n => '<div class="nt ' + n.lv + '"><i>' + (n.lv === 'warn' ? '!' : n.lv === 'ok' ? '✓' : 'i') + '</i><div><b>' + esc(n.h) + '</b><div>' + esc(n.t) + '</div>' + (n.items.length ? '<small>' + esc(n.items.slice(0, 8).join(', ')) + (n.items.length > 8 ? ' và ' + (n.items.length - 8) + ' mục khác' : '') + '</small>' : '') + '</div></div>').join('') + '</details>';
-  renderTabs(); renderPanel();
+}
+function singleBullets() {   // overview of the one period with data
+  const { A1: A, R, one } = S.res, k = R.k1, pl = S.cfg.plan, wk = R.L3.wk1, lb = one ? lbl().p1 : lbl().p0;
+  const chs = Object.keys(A.ch).map(c => Object.assign({ c }, A.ch[c])).sort((a, b) => b.net - a.net);
+  const b = [{ h: 'Kết quả', t: 'Doanh thu thuần ' + lb + ' **' + M(A.net) + '**, ' + E.n0(A.tc) + ' bill, TA ' + M(k.ta) + ', ' + E.nf2.format(k.upt) + ' món/bill, ' + M(k.netDay) + '/ngày trong ' + A.days + ' ngày.' + (pl.net ? ' Đạt **' + P(A.net / pl.net) + '** kế hoạch doanh thu.' : '') }];
+  b.push({ h: 'Kênh', t: chs.slice(0, 3).map(x => x.c + ' ' + P(E.div(x.net, A.net)) + ' doanh thu (TA ' + M(E.div(x.net, x.tc)) + ')').join(', ') + '; qua app ' + P(k.appShare) + '.' });
+  if (wk.we.d && wk.wd.d) b.push({ h: 'Ngày trong tuần', t: 'Cuối tuần ' + M(perDay(wk.we, 'net')) + '/ngày, ngày thường ' + M(perDay(wk.wd, 'net')) + '/ngày (gấp ' + E.n1(E.div(perDay(wk.we, 'net'), perDay(wk.wd, 'net'))) + ' lần).' });
+  b.push({ h: 'Giảm giá và khuyến mãi', t: 'Tỷ lệ giảm giá ' + P(k.discPct) + (A.discEst ? ' (ước tính)' : '') + (k.promoShare != null ? ', doanh thu qua combo/KM ' + P(k.promoShare) : '') + '.' });
+  return b;
+}
+function renderSingle() {
+  const { A1: A, R, one } = S.res, k = R.k1, pl = S.cfg.plan, L = lbl(), lb = one ? L.p1 : L.p0, draws = [];
+  $('execTag').textContent = 'Tổng quan 1 kỳ · ' + lb + ' · ' + restaurantName();
+  $('execTitle').textContent = (R.profit ? 'Gross profit ' + M(R.L1.m1) + ', net sales ' : 'Net sales ') + M(A.net) + ' in ' + A.days + ' days from ' + E.n0(A.tc) + ' bills';
+  renderBullets(singleBullets());
+  $('kpis').innerHTML = [['d', lb + ' · doanh thu thuần', M(A.net)], ['', 'Số bill · TA', E.n0(A.tc) + ' · ' + M(k.ta)], ['', 'Số món/bill', E.nf2.format(k.upt)], ['', 'Doanh thu/ngày', M(k.netDay)]].concat(pl.net ? [['', 'Đạt kế hoạch doanh thu', P(A.net / pl.net)]] : [])
+    .map(x => '<div class="kpi ' + x[0] + '"><small>' + esc(x[1]) + '</small><span><b>' + esc(x[2]) + '</b></span></div>').join('');
+  renderNotices(S.res.notes);
+  const chs = Object.keys(A.ch).map(c => Object.assign({ c }, A.ch[c])).sort((a, b) => b.net - a.net);
+  let h = '<h3>Tổng quan ' + esc(lb) + '</h3><p class="hint" style="margin:0 0 12px">Chỉ có dữ liệu 1 kỳ. Thả thêm file POS cho kỳ còn lại ở bước 1 để xem cầu nối và nguyên nhân thay đổi.</p>';
+  h += '<div class="tools"><b>Theo kênh</b></div>' + table(['Kênh', 'Bill', 'Tỷ trọng bill', 'TA', 'Doanh thu', 'Tỷ trọng doanh thu', 'Giảm giá'], chs.map(x => tr([esc(x.c), E.n0(x.tc), esc(P(E.div(x.tc, A.tc))), esc(M(E.div(x.net, x.tc))), esc(M(x.net)), esc(P(E.div(x.net, A.net))), esc(P(E.div(x.disc, x.listNet)))])));
+  if (A.hasDish) h += weekdaySection(null, A, L, draws, 'wdc');
+  if (A.hasTime) { const hrs = Object.keys(A.hours).map(Number).sort((a, b) => a - b); draws.push(['hc', groupBars(hrs.map(x => x + 'h'), hrs.map(() => 0), hrs.map(x => A.hours[x].net / A.days), M)]); h += '<div class="tools"><b>Doanh thu theo giờ, trung bình mỗi ngày</b></div><div class="fig sm" id="hc"></div>'; }
+  if (A.hasDish) h += '<div class="tools"><b>Ma trận menu</b></div>' + engBlock(R.menu.eng, lb, draws);
+  const vsPlan = S.res.sc.filter(x => x.plan != null && x.b != null);
+  h += '<div class="tools"><b>So với kế hoạch</b></div>' + (vsPlan.length ? table(['Chỉ số', 'Thực tế', 'Kế hoạch', 'Đạt'], vsPlan.map(x => tr([esc(x.name), esc(x.f(x.b)), esc(x.f(x.plan)), x.kind === 'pts' ? esc(E.pp(x.plan, x.b)) : esc(P(x.b / x.plan))]))) : '<p class="hint">Nhập kế hoạch doanh thu, số bill, food cost ở bước 1 để so sánh.</p>');
+  $('panel').innerHTML = h; labelCells($('panel'));
+  draws.forEach(([id, fn]) => { const el = $(id); if (el) mount(el, fn); });
 }
 function renderBullets(b) { $('execBul').innerHTML = b.map(x => '<li><b>' + esc(x.h) + '.</b> ' + rich(x.t) + '</li>').join(''); }
 function treeData() {
@@ -1181,6 +1216,7 @@ function renderPanel() {
     h += head(I.lv[3].title, L) + '<div class="two"><div>' + wf(bridgeBars(R, 3, L), base) + '</div>' + takeaways(I.lv[3]) + '</div>';
     const d0 = A0.dates.filter(d => A0.daily[d]).map(d => ({ d, v: A0.daily[d].net })), d1 = A1.dates.filter(d => A1.daily[d]).map(d => ({ d, v: A1.daily[d].net }));
     if (d0.length > 1 || d1.length > 1) { draws.push(['dc', lines(d0, d1, M)]); h += '<div class="tools"><b>Doanh thu theo ngày trong kỳ</b>' + legend2(L) + '<span class="hint">Trục ngang: ngày thứ n của kỳ</span></div><div class="fig sm" id="dc"></div>'; }
+    if (A0.hasDish && A1.hasDish) h += weekdaySection(A0, A1, L, draws, 'wdc');
     const w0 = R.L3.wk0, w1 = R.L3.wk1, per = (x, f) => x.d ? x[f] / x.d : null;
     const rows = [['Số ngày mở cửa', A0.days, A1.days, E.n0], ['Số ngày cuối tuần (T7–CN)', w0.we.d, w1.we.d, E.n0], ['Bill/ngày', k0.tcDay, k1.tcDay, E.n1], ['Bill/ngày thường (T2–T6)', per(w0.wd, 'tc'), per(w1.wd, 'tc'), E.n1], ['Bill/ngày cuối tuần', per(w0.we, 'tc'), per(w1.we, 'tc'), E.n1], ['Doanh thu/ngày thường', per(w0.wd, 'net'), per(w1.wd, 'net'), M], ['Doanh thu/ngày cuối tuần', per(w0.we, 'net'), per(w1.we, 'net'), M],['Doanh thu/ngày', k0.netDay, k1.netDay, M], ['Khách tại chỗ', A0.guestsDI, A1.guestsDI, E.n0], ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, v => E.nf2.format(v)], ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, M], ['Vòng quay ghế (khách/ghế/ngày)', k0.turnover, k1.turnover, v => E.nf2.format(v)], ['Doanh thu/ghế/ngày', k0.seatDay, k1.seatDay, M]]
       .filter(x => x[1] != null && x[2] != null).map(x => tr([x[0], esc(x[3](x[1])), esc(x[3](x[2])), '<span class="' + cls(x[2] - x[1]) + '">' + esc(SP(E.div(x[2] - x[1], x[1]))) + '</span>']));
@@ -1197,6 +1233,29 @@ function renderPanel() {
   if (lv <= 3) h += '<div class="note"><span>Trục không bắt đầu từ 0 (có dấu ngắt), cột tổng chỉ để so sánh mức chênh lệch.</span><span>Số nhỏ dưới mỗi cột: % so với kỳ so sánh.</span></div>';
   $('panel').innerHTML = h; labelCells($('panel'));
   draws.forEach(([id, fn]) => { const el = $(id); if (el) mount(el, fn); });
+}
+const WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+function byWeekday(A) {   // open days, bills and net per weekday, from Dish Sales days
+  const o = WD.map(() => ({ d: 0, tc: 0, net: 0 }));
+  Object.keys(A.daily).forEach(d => { const x = o[(new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7]; x.d++; x.tc += A.daily[d].tc; x.net += A.daily[d].net; });
+  return o;
+}
+const perDay = (x, f) => x.d ? x[f] / x.d : 0;
+function weekdaySection(A0, A1, L, draws, id) {   // A0 null = one period only
+  const w0 = A0 ? byWeekday(A0) : null, w1 = byWeekday(A1);
+  draws.push([id, groupBars(WD, WD.map((_, i) => w0 ? perDay(w0[i], 'net') : 0), w1.map(x => perDay(x, 'net')), M)]);
+  const head = w0 ? ['Thứ', 'Số ngày', 'Bill/ngày ' + esc(L.p0), 'Bill/ngày ' + esc(L.p1), 'Doanh thu/ngày ' + esc(L.p0), 'Doanh thu/ngày ' + esc(L.p1), 'Δ%'] : ['Thứ', 'Số ngày', 'Bill/ngày', 'Doanh thu/ngày', 'TA'];
+  const rows = WD.map((d, i) => { const b = w1[i]; if (!w0) return tr([d, E.n0(b.d), E.n1(perDay(b, 'tc')), esc(M(perDay(b, 'net'))), esc(M(E.div(b.net, b.tc)))]); const a = w0[i], ch = E.div(perDay(b, 'net') - perDay(a, 'net'), perDay(a, 'net'));
+    return tr([d, a.d + ' → ' + b.d, E.n1(perDay(a, 'tc')), E.n1(perDay(b, 'tc')), esc(M(perDay(a, 'net'))), esc(M(perDay(b, 'net'))), a.d && b.d ? '<span class="' + cls(ch) + '">' + esc(SP(ch)) + '</span>' : '']); });
+  return '<div class="tools"><b>Doanh thu trung bình theo thứ</b>' + (w0 ? legend2(L) : '') + '</div><div class="fig sm" id="' + id + '"></div>' + table(head, rows);
+}
+function engBlock(e, label, draws) {   // menu engineering matrix of one period
+  const q = { Star: [], Plowhorse: [], Puzzle: [], Dog: [] };
+  e.items.forEach(i => q[i.quad].push(i)); Object.keys(q).forEach(k => q[k].sort((a, b) => b.n - a.n));
+  draws.push(['sc', scatter(e.items, e.popT, e.avgM)]);
+  const tip = { Star: 'Giữ nguyên chất lượng, đặt vị trí nổi bật trên menu.', Plowhorse: 'Bán chạy nhưng lãi thấp: tăng giá nhẹ hoặc xem lại định lượng.', Puzzle: 'Lãi cao nhưng ít bán: đẩy giới thiệu, đổi vị trí, đưa vào combo.', Dog: 'Ít bán, lãi thấp: cân nhắc loại khỏi menu.' };
+  return '<div class="two"><div><div class="fig" id="sc" style="min-height:380px"></div><p class="hint">' + (e.byMargin ? 'Trục dọc: lãi gộp mỗi món (giá thực thu trừ giá vốn).' : 'Chưa có giá vốn: trục dọc tạm dùng giá thực thu mỗi món.') + ' Ngưỡng phổ biến = 70% × 1/' + e.items.length + ' món. Kỳ ' + esc(label) + '.</p></div><div class="quad">' +
+    Object.keys(q).map(k => '<div><b>' + k + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
 }
 function menuPanel(L, draws) {
   const { R, A0, A1 } = S.res, Mn = R.menu, mv = S.mv;
@@ -1222,12 +1281,7 @@ function menuPanel(L, draws) {
         !full && ds.length > 15 ? '<tr><td colspan="11" class="l"><button class="btn ghost sm" id="moreDish">Xem tất cả ' + ds.length + ' món</button></td></tr>' : '');
     }
   } else if (mv === 'eng') {
-    const e = Mn.eng, q = { Star: [], Plowhorse: [], Puzzle: [], Dog: [] };
-    e.items.forEach(i => q[i.quad].push(i)); Object.keys(q).forEach(k => q[k].sort((a, b) => b.n - a.n));
-    draws.push(['sc', scatter(e.items, e.popT, e.avgM)]);
-    const tip = { Star: 'Giữ nguyên chất lượng, đặt vị trí nổi bật trên menu.', Plowhorse: 'Bán chạy nhưng lãi thấp: tăng giá nhẹ hoặc xem lại định lượng.', Puzzle: 'Lãi cao nhưng ít bán: đẩy giới thiệu, đổi vị trí, đưa vào combo.', Dog: 'Ít bán, lãi thấp: cân nhắc loại khỏi menu.' };
-    h += '<div class="two"><div><div class="fig" id="sc" style="min-height:380px"></div><p class="hint">' + (e.byMargin ? 'Trục dọc: lãi gộp mỗi món (giá thực thu trừ giá vốn).' : 'Chưa có giá vốn: trục dọc tạm dùng giá thực thu mỗi món.') + ' Ngưỡng phổ biến = 70% × 1/' + e.items.length + ' món. Kỳ ' + esc(L.p1) + '.</p></div><div class="quad">' +
-      Object.keys(q).map(k => '<div><b>' + k + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
+    h += engBlock(Mn.eng, L.p1, draws);
   } else {
     const names = [...new Set(Object.keys(A0.promo).concat(Object.keys(A1.promo)))].map(n => ({ n, a: (A0.promo[n] || { n: 0 }).n, b: (A1.promo[n] || { n: 0 }).n, qa: (A0.promo[n] || { q: 0 }).q, qb: (A1.promo[n] || { q: 0 }).q })).sort((x, y) => y.b - x.b);
     const t0 = A0.promoTotal || A0.net, t1 = A1.promoTotal || A1.net;
@@ -1259,6 +1313,7 @@ function summaryText() {
 }
 function renderReport() {
   const r = S.res; if (!r) return;
+  if (r.one != null) { $('sumTxt').value = '[' + restaurantName() + '] Tổng quan ' + (r.one ? lbl().p1 : lbl().p0) + '\n' + singleBullets().map(b => b.h + ': ' + plain(b.t)).join('\n'); $('sheets').innerHTML = '<div class="empty">Báo cáo so sánh cho cấp trên cần dữ liệu cả 2 kỳ. Hiện chỉ copy được bản tóm tắt ở trên.</div>'; return; }
   const { R, I, A0, A1 } = r, L = lbl(), k0 = R.k0, k1 = R.k1, pl = S.cfg.plan, T = R.L1, today = new Date();
   $('sumTxt').value = summaryText();
   const k4 = [['Doanh thu thuần', M(A1.net), SP(E.div(A1.net - A0.net, A0.net))], pl.net ? ['Đạt kế hoạch', P(A1.net / pl.net), M(A1.net - pl.net)] : ['Số bill', E.n0(A1.tc), SP(E.div(A1.tc - A0.tc, A0.tc))], ['Giá trị bill TB', M(k1.ta), SP(E.div(k1.ta - k0.ta, k0.ta))], r.profit ? ['Biên lãi gộp', P(k1.gmPct), E.pp(k0.gmPct, k1.gmPct)] : ['Số món/bill', E.nf2.format(k1.upt), SP(E.div(k1.upt - k0.upt, k0.upt))]];
@@ -1345,7 +1400,7 @@ async function save(name, blob) {
 }
 function fname(ext) { return 'bao-cao-' + (lbl().p1 || 'ky').replace(/[^\w\-]+/g, '-') + '.' + ext; }
 async function exportXlsx(btn) {
-  if (!S.res) return; btn.disabled = true;
+  if (!S.res) return; if (S.res.one != null) return toast('File Excel cầu nối cần dữ liệu cả 2 kỳ'); btn.disabled = true;
   try {
     if (!window.ExcelJS) await loadScript(LIBS.xlsx);
     const { R, A0, A1 } = S.res, L = lbl(), wb = new window.ExcelJS.Workbook(), pf = R.profit ? 1 : 0;
@@ -1410,8 +1465,8 @@ async function priceTemplate(btn) {
     const wb = new window.ExcelJS.Workbook(), ws = wb.addWorksheet('Gia mon'), L = lbl();
     ws.addRow(['Món', 'Nhóm', 'Giá kỳ so sánh (gồm VAT)', 'Giá kỳ hiện tại (gồm VAT)', 'VAT %', 'Giá vốn/món (chưa VAT)']);
     ws.getRow(1).eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9C3A5' } }; c.alignment = { wrapText: true }; });
-    const cat = {}, vat = {}, lp = [0, 1].map(i => E.listPrices(ds(i).dish, S.cfg.nonFood)), tpl = (i, d) => lp[i].ch[d + '|Dine In'] || lp[i].dish[d];   // menu price = usual in-store price
-    [0, 1].forEach(i => ds(i).dish.forEach(r => { if (S.cfg.nonFood.indexOf(r.cat) >= 0 || r.q <= 0 || r.gr <= 0) return; cat[r.dish] = r.cat; if (r.n > 0) vat[r.dish] = Math.round((r.gr / r.n - 1) * 100); }));
+    const cat = {}, vat = {}, lp = [0, 1].map(i => E.listPrices(ds(i).dish, [])), tpl = (i, d) => lp[i].ch[d + '|Dine In'] || lp[i].dish[d];   // menu price = usual in-store price
+    [0, 1].forEach(i => ds(i).dish.forEach(r => { if (r.q <= 0 || r.gr <= 0) return; /* add-ons stay in the file so their cost can be entered */ cat[r.dish] = r.cat; if (r.n > 0) vat[r.dish] = Math.round((r.gr / r.n - 1) * 100); }));
     Object.keys(cat).sort((a, b) => cat[a].localeCompare(cat[b]) || a.localeCompare(b)).forEach(d => { const p = S.cfg.prices[d] || {}; ws.addRow([d, cat[d], p.l0 || Math.round(tpl(0, d) || tpl(1, d) || 0), p.l1 || Math.round(tpl(1, d) || tpl(0, d) || 0), p.vat || vat[d] || 8, S.cfg.costs[d] != null ? S.cfg.costs[d] : null]); });
     ws.columns = [{ width: 44 }, { width: 20 }, { width: 18 }, { width: 18 }, { width: 8 }, { width: 18 }];
     ws.eachRow((row, n) => { if (n > 1) [3, 4, 6].forEach(j => row.getCell(j).numFmt = '#,##0'); });
@@ -1436,10 +1491,10 @@ async function importPrices(file) {
 
 /* ---------------- navigation & events ---------------- */
 function showPage(n) {
-  if (n > 1 && (S.dirty || !S.res)) { if (!compute()) { toast('Cần dữ liệu cả 2 kỳ'); n = 1; } }
+  if (n > 1 && (S.dirty || !S.res)) { if (!compute()) { toast('Cần dữ liệu POS ít nhất 1 kỳ'); n = 1; } }
   S.page = n;
   [1, 2, 3].forEach(i => $('p' + i).classList.toggle('on', i === n));
-  document.querySelectorAll('#steps button').forEach(b => { const p = +b.dataset.p; b.classList.toggle('on', p === n); b.disabled = p > 1 && !(hasData(0) && hasData(1)); });
+  document.querySelectorAll('#steps button').forEach(b => { const p = +b.dataset.p; b.classList.toggle('on', p === n); b.disabled = p > 1 && !(hasData(0) || hasData(1)); });
   if (n === 1) renderInputs(); if (n === 2) renderAnalysis(); if (n === 3) renderReport();
   $('runbar').hidden = n !== 1;
   try { history.replaceState(null, '', '#' + ['', 'du-lieu', 'phan-tich', 'bao-cao'][n]); } catch (e) { }
@@ -1502,7 +1557,7 @@ $('copySum').onclick = async () => { const t = $('sumTxt').value; try { await na
 // sheet 1 grows with the action list: shrink each sheet to one A4 landscape page (≈748px tall inside the 6mm margins)
 addEventListener('beforeprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = Math.min(0.93, 740 / s.offsetHeight)));
 addEventListener('afterprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = ''));
-['pdf', 'pdf2'].forEach(id => $(id).onclick = () => { if (S.page !== 3) showPage(3); if (S.page === 3) { toast('Chọn "Lưu dưới dạng PDF" trong hộp thoại in'); setTimeout(() => window.print(), 300); } });
+['pdf', 'pdf2'].forEach(id => $(id).onclick = () => { if (S.page !== 3) showPage(3); if (S.res && S.res.one != null) return toast('Báo cáo PDF cần dữ liệu cả 2 kỳ'); if (S.page === 3) { toast('Chọn "Lưu dưới dạng PDF" trong hộp thoại in'); setTimeout(() => window.print(), 300); } });
 
 /* ---------------- start ---------------- */
 $('sampleBtn').onclick = () => { loadSample(); showPage(2); };
@@ -1511,7 +1566,7 @@ $('sampleBtn').onclick = () => { loadSample(); showPage(2); };
   try { saved = await IDB.get('per'); } catch (e) { }
   if (saved && saved.some(p => p.files && p.files.length)) { S.sample = false; S.per = saved; S.cfg = loadCfg(); $('banner').hidden = true; }
   else loadSample();
-  const ok = hasData(0) && hasData(1);
+  const ok = hasData(0) || hasData(1);
   const start = { 'du-lieu': 1, 'phan-tich': 2, 'bao-cao': 3 }[location.hash.slice(1)] || (ok ? 2 : 1);
   showPage(ok ? start : 1);
   initClaude();

@@ -65,4 +65,11 @@ const R3 = E.analyze(E.aggregate({ dish: bills('2026-11-02', 10).concat(bills('2
 assert.ok(R3.ok, 'level 3 still sums to traffic');
 assert.ok(Math.abs(R3.L3.prod) < 1e-6 && Math.abs(R3.L3.daymix - 2000) < 1e-6, 'weekend swap shows as weekend mix (+20 bills x 100), productivity 0');
 
+// add-ons (sauce, topping) are not dishes per bill, but their cost still counts
+const ad = [{ d: '2026-11-02', cat: 'Pasta', chk: '1', dish: 'X', oc: 'Dine In', ot: 'Dine In', g: 1, q: 1, n: 100000, gr: 108000 },
+  { d: '2026-11-02', cat: 'Add sauce', chk: '1', dish: 'Sauce', oc: 'Dine In', ot: 'Dine In', g: 1, q: 2, n: 20000, gr: 21600 }];
+const AD = E.aggregate({ dish: ad }, { costs: { X: 30000, Sauce: 3000 } });
+assert.strictEqual(AD.items, 1);
+assert.strictEqual(AD.food, 36000);
+
 console.log('ok');
