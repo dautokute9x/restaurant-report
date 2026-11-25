@@ -1,4 +1,4 @@
-# Restaurant Performance Report: bản website
+# Báo cáo hiệu quả nhà hàng: bản website
 
 Website tĩnh để phân tích và báo cáo kết quả kinh doanh nhà hàng từ báo cáo POS: Dish Sales, Order Type, Time Sales và Promotion.
 
@@ -47,8 +47,8 @@ Website có thẻ `noindex` để Google không đưa vào kết quả tìm ki�
 1. Xuất 4 báo cáo từ POS cho kỳ hiện tại và kỳ so sánh (tháng trước hoặc cùng kỳ năm trước).
 2. Mở website → bước **1 Dữ liệu** → thả file vào đúng ô từng kỳ. Kiểm tra các dấu ✓ đối chiếu.
 3. Lần đầu dùng: bấm **Tải file mẫu giá và giá vốn**, sửa giá niêm yết và điền giá vốn, rồi **Nhập file giá và giá vốn**. Nhập luôn % hoa hồng app, số ghế và kế hoạch.
-4. Bấm **Phân tích →**, đọc lần lượt Level 01, 02, 03, Menu và Scorecard.
-5. Sang bước **3 Báo cáo**: sửa kế hoạch hành động. Sau đó bấm **Copy tóm tắt** để gửi Zalo, hoặc **In / Xuất PDF** (trong hộp thoại in chọn "Lưu dưới dạng PDF"), **Xuất Excel**.
+4. Bấm **Phân tích →**, đọc lần lượt Cấp 1, 2, 3, Menu và Bảng chỉ số.
+5. Sang bước **3 Báo cáo**: sửa kế hoạch hành động. Sau đó bấm **Sao chép tóm tắt** để gửi Zalo, hoặc **In / Xuất PDF** (trong hộp thoại in chọn "Lưu dưới dạng PDF"), **Xuất Excel**.
 
 ## Claude viết nhận xét (tùy chọn)
 
@@ -66,5 +66,5 @@ Không có khóa thì các nút này được ẩn, mọi tính năng khác vẫ
 - Khi chưa có bảng giá niêm yết, **tiền giảm giá chỉ là số ước tính**: lấy giá bán phổ biến nhất của mỗi món trên từng kênh làm giá niêm yết, vì app (ShopeeFood, Grab...) có bảng giá riêng cao hơn tại quầy. File giá chỉ cần giá menu tại quầy.
 - Các dòng bao bì, phí giao và món thêm (TA Packaging, Packaging, Delivery Fee, Add sauce, Add Topping) không tính vào số món/bill và ma trận menu, nhưng vẫn tính doanh thu và giá vốn. Danh sách này sửa được ở bước 1.
 - Kênh bán được tách theo cột Order Category của Dish Sales, nên Xanh Ngon tách riêng khỏi "Take Away - Customer".
-- Level 03 tách riêng hiệu ứng **ngày cuối tuần**: T7–CN bán gấp 2–3 lần ngày thường, nên kỳ có thêm một ngày cuối tuần không được tính là năng suất tăng.
-- Ở mỗi level, các hiệu ứng cộng lại đúng bằng chênh lệch tổng. Website tự kiểm tra và báo ở mục "Lưu ý về dữ liệu".
+- Cấp 3 tách riêng hiệu ứng **ngày cuối tuần**: T7–CN bán gấp 2–3 lần ngày thường, nên kỳ có thêm một ngày cuối tuần không được tính là năng suất tăng.
+- Ở mỗi cấp, các hiệu ứng cộng lại đúng bằng chênh lệch tổng. Website tự kiểm tra và báo ở mục "Lưu ý về dữ liệu".

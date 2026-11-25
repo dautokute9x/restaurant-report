@@ -3,7 +3,7 @@
 <meta name="description" content="Phân tích và báo cáo kết quả kinh doanh nhà hàng từ báo cáo POS">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2716%27 fill=%27%234a3516%27/%3E%3Ctext x=%2716%27 y=%2722%27 text-anchor=%27middle%27 font-size=%2718%27 font-family=%27sans-serif%27 fill=%27%23efece0%27%3E%CE%94%3C/text%3E%3C/svg%3E">
-<title>Restaurant Performance Report</title>
+<title>Báo cáo hiệu quả nhà hàng</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE  a restaurant manager's monthly review: calm, exact, numbers first, then what to do
@@ -173,7 +173,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 .sheet h4{font-size:13px;margin:12px 0 6px;color:#4a3516;border-bottom:1px solid #e2dccb;padding-bottom:4px}
 .sheet .bl li{font-size:13.5px}
 .sheet table{font-size:12.5px}.sheet th{background:#f3f0e2;color:#4a3516;position:static}.sheet td,.sheet th{padding:5px 8px;border-color:#e2dccb}
-.sheet td[contenteditable]{white-space:normal;text-align:left;outline:none;min-width:60px}.sheet td[contenteditable]:focus{background:#fff8e6}
+.sheet td.l{white-space:normal}.sheet td[contenteditable]{white-space:normal;text-align:left;outline:none;min-width:60px}.sheet td[contenteditable]:focus{background:#fff8e6}
 .sheet .foot{position:absolute;left:46px;right:46px;bottom:16px;font-size:11px;color:#8a8068;display:flex;justify-content:space-between}
 .sheet .fig{min-height:250px}
 .sum{width:100%;min-height:180px;margin-top:10px;font-size:15px;line-height:1.55}
@@ -188,7 +188,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 </style></head><body>
 <div class="bg"><i></i><i></i></div>
 <header class="top"><div class="wrap">
- <div class="logo"><b>Δ</b><span>Restaurant Performance Report</span></div>
+ <div class="logo"><b>Δ</b><span>Báo cáo hiệu quả nhà hàng</span></div>
  <nav class="steps" id="steps">
   <button data-p="1"><b>1</b>Dữ liệu</button><button data-p="2"><b>2</b>Phân tích</button><button data-p="3"><b>3</b>Báo cáo</button>
  </nav>
@@ -213,7 +213,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     <label class="f">Diện tích (m²)<input id="area" type="number" min="0" inputmode="numeric"></label>
     <label class="f">Kế hoạch doanh thu thuần<input id="planNet" type="text" inputmode="numeric" placeholder="vd 900.000.000"></label>
     <label class="f">Kế hoạch số bill<input id="planTc" type="text" inputmode="numeric"></label>
-    <label class="f">Kế hoạch food cost %<input id="planFood" type="number" step="0.1"></label>
+    <label class="f">Kế hoạch tỷ lệ giá vốn NVL %<input id="planFood" type="number" step="0.1"></label>
     <label class="f">Ngưỡng đèn đỏ (% xấu đi)<input id="thr" type="number" step="0.5" min="0"></label>
    </div>
    <p class="eyebrow" style="margin-top:14px">Khung giờ (giờ bắt đầu – kết thúc)</p>
@@ -233,7 +233,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
   </details>
   <details class="card"><summary>Claude viết nhận xét (tùy chọn)</summary>
    <p class="hint" style="margin-top:0">Dán khóa API Anthropic của bạn để bật nút "Viết lại nhận xét bằng Claude" và ô hỏi đáp. Khóa chỉ lưu trong trình duyệt này và chỉ được gửi tới api.anthropic.com kèm bản tóm tắt số liệu. Không lưu khóa trên máy dùng chung.</p>
-   <div class="grid2"><label class="f">Khóa API<input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label><label class="f">Model<input id="apiModel" value="claude-sonnet-5-5"></label></div>
+   <div class="grid2"><label class="f">Khóa API<input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label><label class="f">Mô hình<input id="apiModel" value="claude-sonnet-5-5"></label></div>
    <div class="row" style="margin-top:10px"><button class="btn sm" id="apiSave">Lưu</button><button class="btn ghost sm" id="apiDel">Xóa khóa</button></div>
    <p class="hint" id="apiStat"></p>
   </details>
@@ -262,20 +262,20 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
 <section class="page" id="p3"><div class="wrap">
  <h1>Báo cáo cho cấp trên</h1>
  <p class="sub">Bản 1 trang kèm phụ lục. Các ô trong bảng kế hoạch hành động sửa trực tiếp được và được nhớ trên trình duyệt này.</p>
- <div class="rtools"><button class="btn" id="copySum">Copy tóm tắt</button><button class="btn ghost" id="pdf2">In / Xuất PDF</button><button class="btn ghost" id="xlsx2">Xuất Excel</button><button class="btn ghost" id="actAdd">+ Thêm hành động</button><button class="btn ghost" id="actReset">Gợi ý lại hành động</button></div>
+ <div class="rtools"><button class="btn" id="copySum">Sao chép tóm tắt</button><button class="btn ghost" id="pdf2">In / Xuất PDF</button><button class="btn ghost" id="xlsx2">Xuất Excel</button><button class="btn ghost" id="actAdd">+ Thêm hành động</button><button class="btn ghost" id="actReset">Gợi ý lại hành động</button></div>
  <textarea class="sum" id="sumTxt" aria-label="Tóm tắt" readonly></textarea>
  <div class="sheetwrap" style="margin-top:18px"><div id="sheets"></div></div>
 </div></section>
 
 <div class="run" id="runbar"><div class="wrap"><div class="in"><div class="st" id="runst"></div><button class="btn go" id="runBtn">Phân tích →</button></div></div></div>
-<footer class="wrap" style="position:relative;z-index:1;padding:10px max(3vw,16px) 120px;font-size:13px;color:var(--mut)">Restaurant Performance Report · dữ liệu chỉ xử lý trong trình duyệt · số liệu chưa gồm VAT</footer>
+<footer class="wrap" style="position:relative;z-index:1;padding:10px max(3vw,16px) 120px;font-size:13px;color:var(--mut)">Báo cáo hiệu quả nhà hàng · dữ liệu chỉ xử lý trong trình duyệt · số liệu chưa gồm VAT</footer>
 <div class="toast" id="toast"></div>
 <input type="file" id="fileIn" accept=".xlsx" multiple hidden>
 <script>/* Restaurant Performance Engine
    - parse:     POS exports (Dish Sales, Order Type, Time Sales, Promotion) -> clean records
    - aggregate: one period -> totals, channels, dayparts, hours, days, categories, dishes, promotions
    - bridge:    period 0 -> period 1, three MECE levels + menu, every level sums exactly to delta
-   - insights:  English action titles, Vietnamese bullets, actions                                  */
+   - insights:  headline, bullets and actions in Vietnamese                                  */
 (function (root) {
   'use strict';
   var EPS = 1e-9;
@@ -620,9 +620,9 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
   function n0(x) { return nf0.format(x); }
 
   /* ---------------- insights ---------------- */
-  var EN = {
-    traffic: ['more bills', 'fewer bills'], daymix: ['more weekend days', 'fewer weekend days'], mix: ['a richer channel mix', 'a shift toward lower-value channels'], upt: ['more items per bill', 'fewer items per bill'],
-    price: ['higher prices per item', 'lower prices per item'], disc: ['lighter discounting', 'deeper discounts'], food: ['lower food cost', 'higher food cost'], comm: ['lower app commissions', 'higher app commissions']
+  var PH = {   // headline phrases [when the effect is positive, negative]
+    traffic: ['nhiều bill hơn', 'ít bill hơn'], daymix: ['thêm ngày cuối tuần', 'bớt ngày cuối tuần'], mix: ['cơ cấu kênh có lợi hơn', 'dịch chuyển sang kênh giá trị thấp'], upt: ['nhiều món/bill hơn', 'ít món/bill hơn'],
+    price: ['giá TB/món cao hơn', 'giá TB/món thấp hơn'], disc: ['giảm giá ít hơn', 'giảm giá sâu hơn'], food: ['giá vốn NVL thấp hơn', 'giá vốn NVL cao hơn'], comm: ['hoa hồng app thấp hơn', 'hoa hồng app cao hơn']
   };
   var VN = { traffic: 'Số bill', mix: 'Cơ cấu kênh', upt: 'Số món/bill', price: 'Giá TB/món', disc: 'Giảm giá', food: 'Giá vốn NVL', comm: 'Hoa hồng app', days: 'Số ngày mở cửa', daymix: 'Ngày cuối tuần', prod: 'Bill/ngày' };
   function drivers(R) {
@@ -631,12 +631,12 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     return d.filter(function (x) { return Math.abs(x[1]) > 1; }).sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); });
   }
   function insights(R, A0, A1, L, plan) {
-    var k0 = R.k0, k1 = R.k1, T1 = R.L1, up = T1.delta >= 0, metric = R.profit ? 'Gross profit' : 'Net sales', mVN = R.profit ? 'Lãi gộp' : 'Doanh thu thuần';
+    var k0 = R.k0, k1 = R.k1, T1 = R.L1, up = T1.delta >= 0, mVN = R.profit ? 'Lãi gộp' : 'Doanh thu thuần';
     var dPct = div(T1.delta, Math.abs(T1.m0)), dv = drivers(R), pos = dv.filter(function (x) { return x[1] > 0; }), neg = dv.filter(function (x) { return x[1] < 0; });
     var lead = up ? pos[0] : neg[0], off = up ? neg[0] : pos[0];
-    var flat = Math.abs(dPct) < 0.0005, title = metric + (flat ? ' flat' : ' ' + (up ? 'up ' : 'down ') + n1(Math.abs(dPct * 100)).replace(',', '.') + '%') + ' vs ' + L.p0;
-    if (lead) title += (up ? ' on ' : ' as ') + EN[lead[0]][lead[1] > 0 ? 0 : 1];
-    if (off && Math.abs(off[1]) > 0.15 * Math.abs(T1.delta)) title += ', ' + (up ? 'partly offset by ' : 'despite ') + EN[off[0]][off[1] > 0 ? 0 : 1];
+    var flat = Math.abs(dPct) < 0.0005, title = mVN + (flat ? ' đi ngang' : (up ? ' tăng ' : ' giảm ') + n1(Math.abs(dPct * 100)) + '%') + ' so với ' + L.p0;
+    if (lead) title += (up ? ' nhờ ' : ' do ') + PH[lead[0]][lead[1] > 0 ? 0 : 1];
+    if (off && Math.abs(off[1]) > 0.15 * Math.abs(T1.delta)) title += ', ' + (up ? 'bù trừ một phần bởi ' : 'dù có ') + PH[off[0]][off[1] > 0 ? 0 : 1];
     var why = {
       traffic: function (v) { return 'Số bill ' + (A1.tc >= A0.tc ? 'tăng ' : 'giảm ') + n0(Math.abs(A1.tc - A0.tc)) + ' (' + sPct(div(A1.tc - A0.tc, A0.tc)) + '), bill/ngày ' + n1(k0.tcDay) + ' → ' + n1(k1.tcDay) + ', tác động **' + sMoney(v) + '**' + (Math.abs(v - T1.traffic) > 1 ? ' (không tính phần do số ngày cuối tuần)' : '') + '.'; },
       daymix: function (v) { return 'Số ngày T7–CN ' + R.L3.wk0.we.d + ' → ' + R.L3.wk1.we.d + '; cuối tuần bán ' + n1(div(div(R.L3.wk0.we.tc, R.L3.wk0.we.d), div(R.L3.wk0.wd.tc, R.L3.wk0.wd.d))) + ' lần số bill ngày thường, tác động **' + sMoney(v) + '**.'; },
@@ -644,7 +644,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
       upt: function (v) { return 'Số món/bill ' + nf2.format(k0.upt) + ' → ' + nf2.format(k1.upt) + ', tác động **' + sMoney(v) + '**.'; },
       price: function (v) { return 'Giá TB/món trước giảm giá ' + money(k0.ipList) + ' → ' + money(k1.ipList) + ' (' + sPct(div(k1.ipList - k0.ipList, k0.ipList)) + '), tác động **' + sMoney(v) + '**.'; },
       disc: function (v) { return 'Tỷ lệ giảm giá ' + pct(k0.discPct) + ' → ' + pct(k1.discPct) + (A1.discEst ? ' (ước tính)' : '') + ', tác động **' + sMoney(v) + '**.'; },
-      food: function (v) { return 'Food cost ' + pct(k0.foodPct || 0) + ' → ' + pct(k1.foodPct || 0) + ' doanh thu, tác động **' + sMoney(v) + '**.'; },
+      food: function (v) { return 'Tỷ lệ giá vốn NVL ' + pct(k0.foodPct || 0) + ' → ' + pct(k1.foodPct || 0) + ' doanh thu, tác động **' + sMoney(v) + '**.'; },
       comm: function (v) { return 'Hoa hồng app ' + pct(k0.commPct || 0) + ' → ' + pct(k1.commPct || 0) + ' doanh thu, tác động **' + sMoney(v) + '**.'; }
     };
     var bullets = [{ h: 'Kết quả', t: mVN + ' ' + L.p1 + ' đạt **' + money(T1.m1) + '**, ' + (up ? 'tăng ' : 'giảm ') + '**' + money(Math.abs(T1.delta)) + '** (' + sPct(dPct) + ') so với ' + L.p0 + '; ' + n0(A1.tc) + ' bill, TA ' + money(k1.ta) + ' (' + sPct(div(k1.ta - k0.ta, k0.ta)) + ').' + (plan && plan.net ? ' Đạt **' + pct(div(A1.net, plan.net)) + '** kế hoạch doanh thu.' : '') }];
@@ -654,13 +654,13 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     // level texts
     var lv = {};
     var T2 = R.L2.T, ch = R.L2.rows.slice().sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
-    lv[1] = { title: (R.profit ? 'Profit' : 'Sales') + ' moved ' + sMoney(T1.delta).replace('−', '-') + ': ' + (Math.abs(T1.traffic) >= Math.abs(T1.check) ? 'traffic' : 'average check') + ' explains most of it',
+    lv[1] = { title: mVN + ' thay đổi ' + sMoney(T1.delta) + ', chủ yếu do ' + (Math.abs(T1.traffic) >= Math.abs(T1.check) ? 'số bill' : 'giá trị bill TB'),
       bullets: [
-        { h: 'Traffic', t: why.traffic(T1.traffic) },
-        { h: 'Average check', t: 'TA ' + money(k0.ta) + ' → ' + money(k1.ta) + ' (' + sPct(div(k1.ta - k0.ta, k0.ta)) + '), tác động **' + sMoney(T1.check) + '**: số món/bill **' + sMoney(T1.upt) + '**, giá/món **' + sMoney(T1.price) + '**, giảm giá **' + sMoney(T1.disc) + '**.' }
+        { h: 'Số bill', t: why.traffic(T1.traffic) },
+        { h: 'Giá trị bill TB', t: 'TA ' + money(k0.ta) + ' → ' + money(k1.ta) + ' (' + sPct(div(k1.ta - k0.ta, k0.ta)) + '), tác động **' + sMoney(T1.check) + '**: số món/bill **' + sMoney(T1.upt) + '**, giá/món **' + sMoney(T1.price) + '**, giảm giá **' + sMoney(T1.disc) + '**.' }
       ].concat(R.profit ? [{ h: 'Chi phí', t: 'Giá vốn **' + sMoney(T1.food) + '**, hoa hồng app **' + sMoney(T1.comm) + '**.' }] : []) };
     var shiftTxt = ch.slice(0, 3).map(function (x) { return x.key + ' ' + sMoney(x.delta); }).join(', ');
-    lv[2] = { title: Math.abs(T2.mix) > Math.abs(T2.check) ? 'Channel mix ' + (T2.mix >= 0 ? 'lifted' : 'diluted') + ' the average check' : 'Same-channel check ' + (T2.check >= 0 ? 'rose' : 'fell') + ' more than mix moved',
+    lv[2] = { title: Math.abs(T2.mix) > Math.abs(T2.check) ? 'Cơ cấu kênh làm ' + (T2.mix >= 0 ? 'tăng' : 'giảm') + ' giá trị bill TB' : 'Giá trị bill cùng kênh ' + (T2.check >= 0 ? 'tăng' : 'giảm') + ' nhiều hơn tác động của cơ cấu kênh',
       bullets: [
         { h: 'Kênh biến động nhất', t: shiftTxt + '.' },
         { h: 'Cơ cấu kênh', t: why.mix(T2.mix) },
@@ -668,7 +668,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
       ] };
     var L3 = R.L3;
     var w0 = L3.wk0, w1 = L3.wk1, bpd = function (x) { return n1(perDay(x, 'tc')); }, big = [['days', L3.days], ['daymix', L3.daymix], ['prod', L3.prod]].sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); })[0][0];
-    lv[3] = { title: big === 'days' ? 'Trading days drove traffic' : big === 'daymix' ? 'The weekend calendar drove traffic' : 'Bills per day ' + (L3.prod >= 0 ? 'improved' : 'declined') + ' on a like-for-like basis',
+    lv[3] = { title: big === 'days' ? 'Số ngày mở cửa quyết định số bill' : big === 'daymix' ? 'Lịch cuối tuần quyết định số bill' : 'Bill/ngày ' + (L3.prod >= 0 ? 'tăng' : 'giảm') + ' khi so cùng loại ngày',
       bullets: [
         { h: 'Số ngày mở cửa', t: A0.days + ' → ' + A1.days + ' ngày, tác động **' + sMoney(L3.days) + '**.' },
         { h: 'Ngày cuối tuần', t: 'Số ngày T7–CN ' + w0.we.d + ' → ' + w1.we.d + ' trên tổng ' + A0.days + ' → ' + A1.days + ' ngày; ' + L.p0 + ' cuối tuần ' + bpd(w0.we) + ' bill/ngày, ngày thường ' + bpd(w0.wd) + ', tác động **' + sMoney(L3.daymix) + '**.' },
@@ -681,7 +681,7 @@ td input:hover,td input:focus{border-color:var(--line);background:var(--field)}
     if (T1.upt < 0) act(1, 'Đẩy bán kèm đồ uống, khai vị tại bàn; mục tiêu số món/bill quay lại ' + nf2.format(k0.upt) + '.', T1.upt);
     if (T2.mix < 0) act(2, 'Kéo khách về kênh tại chỗ và mang đi tự đến (ưu đãi đặt trực tiếp) vì bill app thấp hơn và mất hoa hồng.', T2.mix);
     if (R.profit && T1.comm < 0) act(2, 'Đàm phán hoa hồng hoặc chuyển bớt đơn sang kênh giao hàng riêng (Online, Call Center).', T1.comm);
-    if (R.profit && T1.food < 0) act(1, 'Kiểm tra định lượng và hao hụt các nhóm món có food cost tăng.', T1.food);
+    if (R.profit && T1.food < 0) act(1, 'Kiểm tra định lượng và hao hụt các nhóm món có tỷ lệ giá vốn NVL tăng.', T1.food);
     if (L3.prod < 0) {
       var worst = R.L2dp ? R.L2dp.rows.slice().sort(function (a, b) { return a.delta - b.delta; })[0] : null;
       act(3, 'Tăng lượt khách ' + (worst ? 'khung ' + worst.key.toLowerCase() + ' (giảm ' + money(Math.abs(worst.delta)) + ')' : 'khung giờ thấp điểm') + ' bằng combo theo khung giờ, đẩy đặt bàn nhóm.', L3.prod);
@@ -922,11 +922,11 @@ function notices() {
   if (Object.keys(rs).length > 1) add('warn', 'Có nhiều nhà hàng trong dữ liệu', 'Kết quả đang cộng chung các nhà hàng.', Object.keys(rs));
   if (S.res.one != null) return out;
   if (A0.dates.length && A1.dates.length && A0.dates[A0.dates.length - 1] >= A1.dates[0] && A1.dates[A1.dates.length - 1] >= A0.dates[0]) add('warn', 'Hai kỳ bị trùng ngày', 'Kỳ so sánh và kỳ hiện tại có ngày chồng nhau. Kiểm tra lại file đã thả vào từng kỳ.');
-  if (A0.days !== A1.days) add('info', 'Số ngày mở cửa khác nhau', L.p0 + ': ' + A0.days + ' ngày, ' + L.p1 + ': ' + A1.days + ' ngày. Phần chênh nằm ở hiệu ứng "Số ngày mở cửa" (Level 03). Nếu một kỳ chưa hết tháng, nên xuất kỳ so sánh cùng khoảng ngày (ví dụ 1–24 tháng trước) để so sánh công bằng.');
+  if (A0.days !== A1.days) add('info', 'Số ngày mở cửa khác nhau', L.p0 + ': ' + A0.days + ' ngày, ' + L.p1 + ': ' + A1.days + ' ngày. Phần chênh nằm ở hiệu ứng "Số ngày mở cửa" (Cấp 3). Nếu một kỳ chưa hết tháng, nên xuất kỳ so sánh cùng khoảng ngày (ví dụ 1–24 tháng trước) để so sánh công bằng.');
   const nw = R.L2.rows.filter(r => r.flag === 'new').map(r => r.key), ls = R.L2.rows.filter(r => r.flag === 'lost').map(r => r.key);
-  if (nw.length) add('info', 'Kênh mới trong kỳ hiện tại', 'Toàn bộ giá trị của kênh mới nằm ở hiệu ứng Mix.', nw);
-  if (ls.length) add('info', 'Kênh không còn phát sinh', 'Phần giảm của các kênh này nằm ở Traffic và Mix.', ls);
-  if (R.ok) add('ok', 'Kiểm tra cộng dồn: khớp', 'Các hiệu ứng của Level 01, 02, 03 cộng lại đúng bằng chênh lệch tổng.');
+  if (nw.length) add('info', 'Kênh mới trong kỳ hiện tại', 'Toàn bộ giá trị của kênh mới nằm ở hiệu ứng Cơ cấu kênh.', nw);
+  if (ls.length) add('info', 'Kênh không còn phát sinh', 'Phần giảm của các kênh này nằm ở hiệu ứng Số bill và Cơ cấu kênh.', ls);
+  if (R.ok) add('ok', 'Kiểm tra cộng dồn: khớp', 'Các hiệu ứng của Cấp 1, 2, 3 cộng lại đúng bằng chênh lệch tổng.');
   else add('warn', 'Kiểm tra cộng dồn: lệch', 'Có hiệu ứng không cộng đúng bằng chênh lệch. Vui lòng báo lại dữ liệu đầu vào.');
   return out;
 }
@@ -948,7 +948,7 @@ function scorecard() {
     ['TA tại chỗ', k0.taDI, k1.taDI, money, 1, 'rel'],
     ['Chi tiêu/khách tại chỗ', k0.spendHead, k1.spendHead, money, 1, 'rel'],
     ['Khách/bill tại chỗ', k0.guestsPerBill, k1.guestsPerBill, n2, 1, 'rel'],
-    ['Food cost %', k0.foodPct, k1.foodPct, pc, -1, 'pts', pl.food ? pl.food / 100 : null],
+    ['Tỷ lệ giá vốn NVL', k0.foodPct, k1.foodPct, pc, -1, 'pts', pl.food ? pl.food / 100 : null],
     ['Hoa hồng app % doanh thu', k0.commPct, k1.commPct, pc, -1, 'pts'],
     ['Lãi gộp', k0.gm, k1.gm, money, 1, 'rel'],
     ['Biên lãi gộp %', k0.gmPct, k1.gmPct, pc, 1, 'pts'],
@@ -1043,10 +1043,10 @@ function scatter(items, popT, avgM) {
     const x = v => pL + v / mxX * (W - pL - pR), y = v => pT + (1 - v / mxY) * (H - pT - pB);
     const C = { Star: 'var(--pos)', Plowhorse: '#c98a2b', Puzzle: '#5b7fb8', Dog: 'var(--neg)' };
     let s = '<line x1="' + x(popT) + '" x2="' + x(popT) + '" y1="' + pT + '" y2="' + (H - pB) + '" stroke="var(--mut)" stroke-dasharray="4 4"/><line x1="' + pL + '" x2="' + (W - pR) + '" y1="' + y(avgM) + '" y2="' + y(avgM) + '" stroke="var(--mut)" stroke-dasharray="4 4"/>';
-    s += '<text x="' + (W - pR) + '" y="' + (pT + 12) + '" text-anchor="end" font-size="12" font-weight="700" fill="var(--pos)">Star</text><text x="' + (pL + 6) + '" y="' + (pT + 12) + '" font-size="12" font-weight="700" fill="#5b7fb8">Puzzle</text><text x="' + (W - pR) + '" y="' + (H - pB - 6) + '" text-anchor="end" font-size="12" font-weight="700" fill="#c98a2b">Plowhorse</text><text x="' + (pL + 6) + '" y="' + (H - pB - 6) + '" font-size="12" font-weight="700" fill="var(--neg)">Dog</text>';
+    s += '<text x="' + (W - pR) + '" y="' + (pT + 12) + '" text-anchor="end" font-size="12" font-weight="700" fill="var(--pos)">Ngôi sao</text><text x="' + (pL + 6) + '" y="' + (pT + 12) + '" font-size="12" font-weight="700" fill="#5b7fb8">Dấu hỏi</text><text x="' + (W - pR) + '" y="' + (H - pB - 6) + '" text-anchor="end" font-size="12" font-weight="700" fill="#c98a2b">Ngựa kéo</text><text x="' + (pL + 6) + '" y="' + (H - pB - 6) + '" font-size="12" font-weight="700" fill="var(--neg)">Món yếu</text>';
     s += '<text x="' + ((W + pL) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="var(--mut)">Tỷ trọng số lượng bán →</text><text x="12" y="' + ((H - pB) / 2) + '" font-size="11" fill="var(--mut)" transform="rotate(-90 12 ' + ((H - pB) / 2) + ')" text-anchor="middle">Lãi gộp / món →</text>';
     const top = items.slice().sort((a, b) => b.n - a.n).slice(0, W < 520 ? 4 : 8).map(i => i.name);
-    items.forEach(i => { const r = 3 + 11 * Math.sqrt(i.n / mxN); s += '<circle cx="' + x(i.share).toFixed(1) + '" cy="' + y(i.m).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + C[i.quad] + '" fill-opacity=".55" stroke="' + C[i.quad] + '"><title>' + esc(i.name + ' · ' + i.quad + ' · ' + E.n0(i.q) + ' món · ' + M(i.n)) + '</title></circle>'; });
+    items.forEach(i => { const r = 3 + 11 * Math.sqrt(i.n / mxN); s += '<circle cx="' + x(i.share).toFixed(1) + '" cy="' + y(i.m).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + C[i.quad] + '" fill-opacity=".55" stroke="' + C[i.quad] + '"><title>' + esc(i.name + ' · ' + QN[i.quad] + ' · ' + E.n0(i.q) + ' món · ' + M(i.n)) + '</title></circle>'; });
     const placed = [];
     items.filter(i => top.indexOf(i.name) >= 0).sort((a, b) => b.n - a.n).forEach(i => {
       const t = i.name.length > 22 ? i.name.slice(0, 21) + '…' : i.name, tw = t.length * 6.2, cx = x(i.share), right = cx + 8 + tw > W - pR, lx = right ? cx - 8 - tw : cx + 8, ly = y(i.m) - 8;
@@ -1111,7 +1111,7 @@ function renderAnalysis() {
   const one = r.one != null; $('tree').parentElement.hidden = one; $('tabs').hidden = one; $('ai').hidden = $('askbox').hidden = one || !S.sm;
   if (one) return renderSingle();
   const { R, I, A0, A1 } = r, L = lbl(), k0 = R.k0, k1 = R.k1, T = R.L1, pl = S.cfg.plan;
-  $('execTag').textContent = (r.profit ? 'Gross profit' : 'Net sales') + ' bridge · ' + L.p0 + ' → ' + L.p1 + ' · ' + restaurantName();
+  $('execTag').textContent = (r.profit ? 'Cầu nối lãi gộp' : 'Cầu nối doanh thu thuần') + ' · ' + L.p0 + ' → ' + L.p1 + ' · ' + restaurantName();
   $('execTitle').textContent = I.title;
   renderBullets(I.bullets);
   const kp = [
@@ -1142,7 +1142,7 @@ function singleBullets() {   // overview of the one period with data
 function renderSingle() {
   const { A1: A, R, one } = S.res, k = R.k1, pl = S.cfg.plan, L = lbl(), lb = one ? L.p1 : L.p0, draws = [];
   $('execTag').textContent = 'Tổng quan 1 kỳ · ' + lb + ' · ' + restaurantName();
-  $('execTitle').textContent = (R.profit ? 'Gross profit ' + M(R.L1.m1) + ', net sales ' : 'Net sales ') + M(A.net) + ' in ' + A.days + ' days from ' + E.n0(A.tc) + ' bills';
+  $('execTitle').textContent = (R.profit ? 'Lãi gộp ' + M(R.L1.m1) + ', doanh thu thuần ' : 'Doanh thu thuần ') + M(A.net) + ' trong ' + A.days + ' ngày, ' + E.n0(A.tc) + ' bill';
   renderBullets(singleBullets());
   $('kpis').innerHTML = [['d', lb + ' · doanh thu thuần', M(A.net)], ['', 'Số bill · TA', E.n0(A.tc) + ' · ' + M(k.ta)], ['', 'Số món/bill', E.nf2.format(k.upt)], ['', 'Doanh thu/ngày', M(k.netDay)]].concat(pl.net ? [['', 'Đạt kế hoạch doanh thu', P(A.net / pl.net)]] : [])
     .map(x => '<div class="kpi ' + x[0] + '"><small>' + esc(x[1]) + '</small><span><b>' + esc(x[2]) + '</b></span></div>').join('');
@@ -1163,8 +1163,8 @@ function treeData() {
   const { R } = S.res, T2 = R.L2.T, L3 = R.L3, base = Math.abs(R.L1.m0);
   const nd = (id, n, v, f, d) => ({ id, n, v, f, d });
   const t = { root: nd('root', 'Chênh lệch ' + (R.profit ? 'lãi gộp' : 'doanh thu'), R.L1.delta, 'M1 − M0', 'Kết quả kỳ hiện tại trừ kỳ so sánh.'), base: base, br: [] };
-  t.br.push({ n: nd('traffic', 'Số bill (Traffic)', T2.traffic, '(TC1 − TC0) × W0', 'W0 = ' + (R.profit ? 'lãi gộp/bill' : 'giá trị bill TB') + ' kỳ so sánh (' + M(L3.W) + ').'), kids: [nd('days', 'Số ngày mở cửa', L3.days, '(D1/D0 − 1) × TC0 × W0', 'Phần bill tăng/giảm do số ngày mở cửa thay đổi.'), nd('daymix', 'Ngày cuối tuần', L3.daymix, '(Σ D1,loại × TC0,loại/D0,loại − TC0 × D1/D0) × W0', 'Kỳ có nhiều hay ít ngày T7–CN hơn; loại ngày = ngày thường (T2–T6) hoặc cuối tuần.'), nd('prod', 'Bill/ngày cùng loại ngày', L3.prod, '(TC1 − Σ D1,loại × TC0,loại/D0,loại) × W0', 'Năng suất thật: bill mỗi ngày so với cùng loại ngày kỳ trước.')] });
-  t.br.push({ n: nd('mix', 'Cơ cấu kênh (Mix)', T2.mix, 'Σ (TC1,k − TC0,k × TC1/TC0) × W0,k', 'Dịch chuyển bill giữa các kênh có giá trị khác nhau.'), kids: [] });
+  t.br.push({ n: nd('traffic', 'Số bill', T2.traffic, '(TC1 − TC0) × W0', 'W0 = ' + (R.profit ? 'lãi gộp/bill' : 'giá trị bill TB') + ' kỳ so sánh (' + M(L3.W) + ').'), kids: [nd('days', 'Số ngày mở cửa', L3.days, '(D1/D0 − 1) × TC0 × W0', 'Phần bill tăng/giảm do số ngày mở cửa thay đổi.'), nd('daymix', 'Ngày cuối tuần', L3.daymix, '(Σ D1,loại × TC0,loại/D0,loại − TC0 × D1/D0) × W0', 'Kỳ có nhiều hay ít ngày T7–CN hơn; loại ngày = ngày thường (T2–T6) hoặc cuối tuần.'), nd('prod', 'Bill/ngày cùng loại ngày', L3.prod, '(TC1 − Σ D1,loại × TC0,loại/D0,loại) × W0', 'Năng suất thật: bill mỗi ngày so với cùng loại ngày kỳ trước.')] });
+  t.br.push({ n: nd('mix', 'Cơ cấu kênh', T2.mix, 'Σ (TC1,k − TC0,k × TC1/TC0) × W0,k', 'Dịch chuyển bill giữa các kênh có giá trị khác nhau.'), kids: [] });
   t.br.push({ n: nd('check', 'Giá trị bill cùng kênh', T2.check, 'Σ (TA1,k − TA0,k) × TC1,k', 'TA từng kênh thay đổi khi giữ nguyên cơ cấu.'), kids: [nd('upt', 'Số món/bill', T2.upt, 'TC1 × (UPT1 − UPT0) × Giá0 × Thực thu0', 'Bán kèm, số món mỗi bill.'), nd('price', 'Giá TB/món', T2.price, 'TC1 × UPT1 × (Giá1 − Giá0) × Thực thu0', 'Giá niêm yết trung bình mỗi món (đổi giá, đổi cơ cấu món).'), nd('disc', 'Giảm giá', T2.disc, 'TC1 × UPT1 × Giá1 × (Thực thu1 − Thực thu0)', 'Thực thu = doanh thu thuần ÷ doanh thu theo giá niêm yết.')] });
   if (R.profit) t.br.push({ n: nd('cost', 'Chi phí', T2.cost, '−Σ (CPB1,k − CPB0,k) × TC1,k', 'Chi phí trên mỗi bill thay đổi.'), kids: [nd('food', 'Giá vốn NVL', T2.food, '−Σ (Giá vốn/bill1 − Giá vốn/bill0) × TC1', 'Theo định lượng món.'), nd('comm', 'Hoa hồng app', T2.comm, '−Σ (Hoa hồng/bill1 − Hoa hồng/bill0) × TC1', 'Theo % hoa hồng từng kênh.')] });
   return t;
@@ -1177,13 +1177,13 @@ function renderTree() {
   $('treeF').className = 'tf' + (n ? '' : ' hint');
   $('treeF').innerHTML = n ? '<b>' + esc(n.n) + ': ' + esc(SM(n.v)) + '</b> <span class="hint">(' + esc(SP(n.v / (t.base || 1))) + ' so với kỳ so sánh)</span><code>' + esc(n.f) + '</code>' + esc(n.d) : 'Chọn một ô để xem công thức tính.';
 }
-const TABS = [[1, 'Level 01', 'Traffic & Check', 'Số bill, giá trị bill'], [2, 'Level 02', 'Mix', 'Kênh, khung giờ'], [3, 'Level 03', 'Công suất', 'Ngày mở cửa, bill/ngày'], [4, 'Menu', 'Món & combo', 'Nhóm món, khuyến mãi'], [5, 'Scorecard', 'KPI vận hành', 'So với kỳ trước, kế hoạch']];
+const TABS = [[1, 'Cấp 1', 'Số bill & giá trị bill', 'Số bill, món/bill, giá, giảm giá'], [2, 'Cấp 2', 'Cơ cấu', 'Kênh, khung giờ'], [3, 'Cấp 3', 'Công suất', 'Ngày mở cửa, cuối tuần, bill/ngày'], [4, 'Menu', 'Món & combo', 'Nhóm món, khuyến mãi'], [5, 'Bảng chỉ số', 'Chỉ số vận hành', 'So với kỳ trước, kế hoạch']];
 function renderTabs() {
   const hasMenu = S.res.A0.hasDish && S.res.A1.hasDish;
   $('tabs').innerHTML = TABS.map(t => '<button class="tb' + (S.tab === t[0] ? ' on' : '') + (t[0] === 4 && !hasMenu ? ' lock' : '') + '" role="tab" aria-selected="' + (S.tab === t[0]) + '" data-t="' + t[0] + '"><em>' + t[1] + '</em><b>' + t[2] + '</b><span>' + t[3] + '</span></button>').join('');
 }
 function head(title, L, extra) { return '<h3>' + esc(title) + '</h3><p class="hint" style="margin:0 0 12px">' + (S.res.profit ? 'Lãi gộp' : 'Doanh thu thuần') + ' · ' + esc(L.p0) + ' → ' + esc(L.p1) + ' · VND' + (extra || '') + '</p>'; }
-function takeaways(info) { return '<div class="take"><h4>Key takeaways</h4><ul class="bl">' + info.bullets.map(b => '<li><b>' + esc(b.h) + '.</b> ' + rich(b.t) + '</li>').join('') + '</ul>' + (info.actions && info.actions.length ? '<div class="acts2"><b>Gợi ý hành động</b><ul>' + info.actions.map(a => '<li>' + esc(a) + '</li>').join('') + '</ul></div>' : '') + '</div>'; }
+function takeaways(info) { return '<div class="take"><h4>Điểm chính</h4><ul class="bl">' + info.bullets.map(b => '<li><b>' + esc(b.h) + '.</b> ' + rich(b.t) + '</li>').join('') + '</ul>' + (info.actions && info.actions.length ? '<div class="acts2"><b>Gợi ý hành động</b><ul>' + info.actions.map(a => '<li>' + esc(a) + '</li>').join('') + '</ul></div>' : '') + '</div>'; }
 function table(headArr, rows, tot) { return '<div class="tw"><table class="stack"><thead><tr>' + headArr.map((h, i) => '<th' + (i === 0 ? ' class="l"' : '') + '>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + (tot || '') + '</tbody></table></div>'; }
 function tr(cells, cl) { return '<tr' + (cl ? ' class="' + cl + '"' : '') + '>' + cells.map((c, i) => '<td' + (i === 0 ? ' class="l"' : '') + '>' + c + '</td>').join('') + '</tr>'; }
 function bridgeBars(R, lv, L) {
@@ -1215,7 +1215,7 @@ function renderPanel() {
     h += '<div class="two"><div>' + wf(bars, base) + '</div>' + takeaways(I.lv[2]) + '</div>';
     const rows = B.rows.slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)), mx = Math.max(...rows.map(x => Math.abs(x.delta)), 1), sh0 = B.T.tc0, sh1 = B.T.tc1;
     h += '<div class="tools"><b>' + (dp ? 'Theo khung giờ' : 'Theo kênh') + '</b><span class="hint">Sắp theo mức chênh lệch</span></div>' +
-      table([dp ? 'Khung giờ' : 'Kênh', 'Bill ' + esc(L.p0), 'Bill ' + esc(L.p1), 'Tỷ trọng bill', 'TA ' + esc(L.p0), 'TA ' + esc(L.p1), 'Số bill', 'Mix', 'Bill cùng ' + (dp ? 'khung' : 'kênh')].concat(R.profit ? ['Chi phí'] : []).concat(['Chênh lệch', '']),
+      table([dp ? 'Khung giờ' : 'Kênh', 'Bill ' + esc(L.p0), 'Bill ' + esc(L.p1), 'Tỷ trọng bill', 'TA ' + esc(L.p0), 'TA ' + esc(L.p1), 'Số bill', 'Cơ cấu', 'Bill cùng ' + (dp ? 'khung' : 'kênh')].concat(R.profit ? ['Chi phí'] : []).concat(['Chênh lệch', '']),
         rows.map(x => tr([esc(x.key) + (x.flag ? ' <span class="hint">(' + (x.flag === 'new' ? 'mới' : 'ngừng') + ')</span>' : ''), E.n0(x.tc0), E.n0(x.tc1), esc(P(E.div(x.tc0, sh0))) + ' → ' + esc(P(E.div(x.tc1, sh1))), esc(M(x.ta0)), esc(M(x.ta1)), sg(x.traffic), sg(x.mix), sg(x.check)].concat(R.profit ? [sg(x.cost)] : []).concat([sg(x.delta), vbar(x.delta, mx)]))),
         tr(['Tổng', E.n0(B.T.tc0), E.n0(B.T.tc1), '', esc(M(E.div(A0.net, B.T.tc0))), esc(M(E.div(A1.net, B.T.tc1))), sg(B.T.traffic), sg(B.T.mix), sg(B.T.check)].concat(R.profit ? [sg(B.T.cost)] : []).concat([sg(B.T.delta), '']), 'tot'));
     if (A0.hasTime && A1.hasTime) {
@@ -1237,7 +1237,7 @@ function renderPanel() {
     else h += menuPanel(L, draws);
   } else {
     const sc = r.sc, dot = s => s ? '<span title="' + ({ g: 'Tốt', a: 'Theo dõi', r: 'Cần xử lý' })[s] + '" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + ({ g: 'var(--pos)', a: '#d99a2b', r: 'var(--neg)' })[s] + '"></span>' : '';
-    h += head('Operating scorecard: ' + sc.filter(x => x.st === 'r').length + ' red, ' + sc.filter(x => x.st === 'a').length + ' amber, ' + sc.filter(x => x.st === 'g').length + ' green', L, ' · ngưỡng đỏ ' + S.cfg.thr + '% hoặc 1 điểm %');
+    h += head('Bảng chỉ số vận hành: ' + sc.filter(x => x.st === 'r').length + ' đỏ, ' + sc.filter(x => x.st === 'a').length + ' vàng, ' + sc.filter(x => x.st === 'g').length + ' xanh', L, ' · ngưỡng đỏ ' + S.cfg.thr + '% hoặc 1 điểm %');
     h += table(['Chỉ số', esc(L.p0), esc(L.p1), 'Chênh lệch', 'Kế hoạch', 'Trạng thái'], sc.map(x => tr([esc(x.name), x.a == null ? '–' : esc(x.f(x.a)), x.b == null ? '–' : esc(x.f(x.b)), x.a == null || x.b == null ? '' : '<span class="' + (x.good ? cls(x.good * x.d) : '') + '">' + esc(x.kind === 'pts' ? E.pp(x.a, x.b) : SP(x.rel)) + '</span>', x.plan == null ? '' : esc(x.f(x.plan)) + ' <span class="hint">(' + esc(x.kind === 'pts' ? E.pp(x.plan, x.b) : P(x.b / x.plan)) + ')</span>', dot(x.st)])));
     h += '<div class="note"><span>Xanh: tốt hơn hoặc đạt kế hoạch. Vàng: xấu đi dưới ngưỡng. Đỏ: xấu đi từ ngưỡng trở lên hoặc đạt dưới 95% kế hoạch.</span></div>';
   }
@@ -1255,24 +1255,25 @@ function weekdaySection(A0, A1, L, draws, id) {   // A0 null = one period only
     return tr([d, a.d + ' → ' + b.d, E.n1(perDay(a, 'tc')), E.n1(perDay(b, 'tc')), esc(M(perDay(a, 'net'))), esc(M(perDay(b, 'net'))), a.d && b.d ? '<span class="' + cls(ch) + '">' + esc(SP(ch)) + '</span>' : '']); });
   return '<div class="tools"><b>Doanh thu trung bình theo thứ</b>' + (w0 ? legend2(L) : '') + '</div><div class="fig sm" id="' + id + '"></div>' + table(head, rows);
 }
+const QN = { Star: 'Ngôi sao', Plowhorse: 'Ngựa kéo', Puzzle: 'Dấu hỏi', Dog: 'Món yếu' };   // menu matrix groups (engine keys -> labels)
 function engBlock(e, label, draws) {   // menu engineering matrix of one period
   const q = { Star: [], Plowhorse: [], Puzzle: [], Dog: [] };
   e.items.forEach(i => q[i.quad].push(i)); Object.keys(q).forEach(k => q[k].sort((a, b) => b.n - a.n));
   draws.push(['sc', scatter(e.items, e.popT, e.avgM)]);
   const tip = { Star: 'Giữ nguyên chất lượng, đặt vị trí nổi bật trên menu.', Plowhorse: 'Bán chạy nhưng lãi thấp: tăng giá nhẹ hoặc xem lại định lượng.', Puzzle: 'Lãi cao nhưng ít bán: đẩy giới thiệu, đổi vị trí, đưa vào combo.', Dog: 'Ít bán, lãi thấp: cân nhắc loại khỏi menu.' };
   return '<div class="two"><div><div class="fig" id="sc" style="min-height:380px"></div><p class="hint">' + (e.byMargin ? 'Trục dọc: lãi gộp mỗi món (giá thực thu trừ giá vốn).' : 'Chưa có giá vốn: trục dọc tạm dùng giá thực thu mỗi món.') + ' Ngưỡng phổ biến = 70% × 1/' + e.items.length + ' món. Kỳ ' + esc(label) + '.</p></div><div class="quad">' +
-    Object.keys(q).map(k => '<div><b>' + k + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
+    Object.keys(q).map(k => '<div><b>' + QN[k] + ' (' + q[k].length + ')</b>' + esc(tip[k]) + '<br><span class="hint">' + esc(q[k].slice(0, 4).map(i => i.name).join(', ') || '–') + '</span></div>').join('') + '</div></div>';
 }
 function menuPanel(L, draws) {
   const { R, A0, A1 } = S.res, Mn = R.menu, mv = S.mv;
-  let h = head('Menu: ' + (Math.abs(Mn.T.price) > Math.abs(Mn.T.vol + Mn.T.mix) ? 'price moves outweigh volume' : 'volume and mix drive the menu result'), L, ' · ' + (R.profit ? 'lãi gộp món (chưa trừ hoa hồng)' : 'doanh thu thuần theo món'));
+  let h = head('Menu: ' + (Math.abs(Mn.T.price) > Math.abs(Mn.T.vol + Mn.T.mix) ? 'giá thay đổi tác động lớn hơn sản lượng' : 'sản lượng và cơ cấu món quyết định kết quả'), L, ' · ' + (R.profit ? 'lãi gộp món (chưa trừ hoa hồng)' : 'doanh thu thuần theo món'));
   h += '<div class="tools"><span class="seg" id="mvSeg">' + [['cat', 'Nhóm món'], ['dish', 'Món'], ['eng', 'Ma trận menu'], ['promo', 'Combo & KM']].map(x => '<button data-m="' + x[0] + '" class="' + (mv === x[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</span></div>';
   const base = Math.abs(Mn.T.m0), mc = R.profit && Math.abs(Mn.T.cost) > 1;
   if (mv === 'cat' || mv === 'dish') {
     const bars = [{ l: L.p0, v: Mn.T.m0, t: 'base' }, { l: 'Sản lượng', v: Mn.T.vol }, { l: 'Cơ cấu món', v: Mn.T.mix }, { l: 'Giá thực thu', v: Mn.T.price }].concat(mc ? [{ l: 'Giá vốn/món', v: Mn.T.cost }] : []).concat([{ l: L.p1, v: Mn.T.m1, t: 'cur' }]);
     draws.push(['mf', waterfall(bars, base)]);
     const cats = Mn.cats.slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)), top = cats.slice(0, 3);
-    h += '<div class="two"><div>' + legend(L) + '<div class="fig" id="mf"></div></div><div class="take"><h4>Key takeaways</h4><ul class="bl">' +
+    h += '<div class="two"><div>' + legend(L) + '<div class="fig" id="mf"></div></div><div class="take"><h4>Điểm chính</h4><ul class="bl">' +
       top.map(c => '<li><b>' + esc(c.cat) + '.</b> ' + rich('Chênh lệch **' + SM(c.delta) + '**: sản lượng ' + SM(c.vol) + ', cơ cấu ' + SM(c.mix) + ', giá ' + SM(c.price) + '.') + '</li>').join('') +
       '</ul><div class="acts2"><b>Cách đọc</b><ul><li>Sản lượng: bán nhiều hay ít món hơn trong cùng nhóm.</li><li>Cơ cấu món: khách chuyển sang món đắt hay rẻ hơn trong nhóm.</li><li>Giá thực thu: giá sau giảm giá, đã gồm đổi giá menu.</li></ul></div></div></div>';
     if (mv === 'cat') {
@@ -1319,7 +1320,7 @@ function summaryText() {
 }
 function renderReport() {
   const r = S.res; if (!r) return;
-  if (r.one != null) { $('sumTxt').value = '[' + restaurantName() + '] Tổng quan ' + (r.one ? lbl().p1 : lbl().p0) + '\n' + singleBullets().map(b => b.h + ': ' + plain(b.t)).join('\n'); $('sheets').innerHTML = '<div class="empty">Báo cáo so sánh cho cấp trên cần dữ liệu cả 2 kỳ. Hiện chỉ copy được bản tóm tắt ở trên.</div>'; return; }
+  if (r.one != null) { $('sumTxt').value = '[' + restaurantName() + '] Tổng quan ' + (r.one ? lbl().p1 : lbl().p0) + '\n' + singleBullets().map(b => b.h + ': ' + plain(b.t)).join('\n'); $('sheets').innerHTML = '<div class="empty">Báo cáo so sánh cho cấp trên cần dữ liệu cả 2 kỳ. Hiện chỉ sao chép được bản tóm tắt ở trên.</div>'; return; }
   const { R, I, A0, A1 } = r, L = lbl(), k0 = R.k0, k1 = R.k1, pl = S.cfg.plan, T = R.L1, today = new Date();
   $('sumTxt').value = summaryText();
   const k4 = [['Doanh thu thuần', M(A1.net), SP(E.div(A1.net - A0.net, A0.net))], pl.net ? ['Đạt kế hoạch', P(A1.net / pl.net), M(A1.net - pl.net)] : ['Số bill', E.n0(A1.tc), SP(E.div(A1.tc - A0.tc, A0.tc))], ['Giá trị bill TB', M(k1.ta), SP(E.div(k1.ta - k0.ta, k0.ta))], r.profit ? ['Biên lãi gộp', P(k1.gmPct), E.pp(k0.gmPct, k1.gmPct)] : ['Số món/bill', E.nf2.format(k1.upt), SP(E.div(k1.upt - k0.upt, k0.upt))]];
@@ -1333,13 +1334,13 @@ function renderReport() {
     acts.map((a, i) => '<tr>' + a.map((c, j) => '<td contenteditable="true" data-a="' + i + ':' + j + '">' + esc(c) + '</td>').join('') + '<td class="noprint"><button class="x" data-arm="' + i + '" aria-label="Xóa hành động">×</button></td></tr>').join('') + '</tbody></table>' +
     '<div class="foot"><span>Nguồn: POS Dish Sales, Order Type, Time Sales, Promotion' + (A1.discEst ? ' · giảm giá ước tính' : '') + '</span><span>Các hiệu ứng cộng đúng bằng chênh lệch ' + (R.ok ? '✓' : '!') + '</span></div></div>';
   const chRows = R.L2.rows.slice().sort((a, b) => b.net1 - a.net1);
-  let s2 = '<div class="sheet" id="sh2">' + band(2) + '<h2>Phụ lục: kênh, công suất và KPI</h2><div class="cols"><div><h4>Theo kênh (Level 02)</h4><table><thead><tr><th class="l">Kênh</th><th>Bill</th><th>TA</th><th>Doanh thu</th><th>Mix</th><th>Bill cùng kênh</th><th>Chênh lệch</th></tr></thead><tbody>' +
+  let s2 = '<div class="sheet" id="sh2">' + band(2) + '<h2>Phụ lục: kênh, công suất và KPI</h2><div class="cols"><div><h4>Theo kênh (Cấp 2)</h4><table><thead><tr><th class="l">Kênh</th><th>Bill</th><th>TA</th><th>Doanh thu</th><th>Cơ cấu</th><th>Bill cùng kênh</th><th>Chênh lệch</th></tr></thead><tbody>' +
     chRows.map(x => '<tr><td class="l">' + esc(x.key) + '</td><td>' + E.n0(x.tc0) + ' → ' + E.n0(x.tc1) + '</td><td>' + esc(M(x.ta1)) + '</td><td>' + esc(M(x.net1)) + '</td><td>' + sg(x.mix) + '</td><td>' + sg(x.check) + '</td><td>' + sg(x.delta) + '</td></tr>').join('') + '</tbody></table>' +
-    '<h4>Công suất (Level 03)</h4><table><tbody>' + [['Số ngày mở cửa', A0.days + ' → ' + A1.days, SM(R.L3.days)], ['Ngày cuối tuần (T7–CN)', R.L3.wk0.we.d + ' → ' + R.L3.wk1.we.d, SM(R.L3.daymix)], ['Bill/ngày', E.n1(k0.tcDay) + ' → ' + E.n1(k1.tcDay), SM(R.L3.prod)]].concat(k1.turnover != null ? [['Vòng quay ghế', (k0.turnover != null ? E.nf2.format(k0.turnover) + ' → ' : '') + E.nf2.format(k1.turnover), '']] : []).map(x => '<tr><td class="l">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td><td>' + (x[2] ? '<span class="' + (x[2].charAt(0) === '−' ? 'm' : 'p') + '">' + esc(x[2]) + '</span>' : '') + '</td></tr>').join('') + '</tbody></table>' +
+    '<h4>Công suất (Cấp 3)</h4><table><tbody>' + [['Số ngày mở cửa', A0.days + ' → ' + A1.days, SM(R.L3.days)], ['Ngày cuối tuần (T7–CN)', R.L3.wk0.we.d + ' → ' + R.L3.wk1.we.d, SM(R.L3.daymix)], ['Bill/ngày', E.n1(k0.tcDay) + ' → ' + E.n1(k1.tcDay), SM(R.L3.prod)]].concat(k1.turnover != null ? [['Vòng quay ghế', (k0.turnover != null ? E.nf2.format(k0.turnover) + ' → ' : '') + E.nf2.format(k1.turnover), '']] : []).map(x => '<tr><td class="l">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td><td>' + (x[2] ? '<span class="' + (x[2].charAt(0) === '−' ? 'm' : 'p') + '">' + esc(x[2]) + '</span>' : '') + '</td></tr>').join('') + '</tbody></table>' +
     (S.cfg.events.length ? '<h4>Nhật ký sự kiện</h4><ul class="bl">' + S.cfg.events.map(e => '<li><b>' + esc(e[0]) + '.</b> ' + esc(e[1]) + '</li>').join('') + '</ul>' : '') +
-    '</div><div><h4>Scorecard</h4><table><thead><tr><th class="l">Chỉ số</th><th>' + esc(L.p0) + '</th><th>' + esc(L.p1) + '</th><th>Δ</th><th></th></tr></thead><tbody>' +
+    '</div><div><h4>Bảng chỉ số</h4><table><thead><tr><th class="l">Chỉ số</th><th>' + esc(L.p0) + '</th><th>' + esc(L.p1) + '</th><th>Δ</th><th></th></tr></thead><tbody>' +
     r.sc.slice(0, 17).map(x => '<tr><td class="l">' + esc(x.name) + '</td><td>' + (x.a == null ? '–' : esc(x.f(x.a))) + '</td><td>' + (x.b == null ? '–' : esc(x.f(x.b))) + '</td><td>' + (x.a == null || x.b == null ? '' : esc(x.kind === 'pts' ? E.pp(x.a, x.b).replace(' điểm %', 'đ%') : SP(x.rel))) + '</td><td>' + (x.st ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + ({ g: 'var(--pos)', a: '#d99a2b', r: 'var(--neg)' })[x.st] + '"></span>' : '') + '</td></tr>').join('') + '</tbody></table></div></div>' +
-    '<div class="foot"><span>W = ' + (r.profit ? 'lãi gộp' : 'doanh thu') + ' mỗi bill kỳ so sánh · TA = doanh thu thuần ÷ số bill · số liệu chưa gồm VAT</span><span>Restaurant Performance Report</span></div></div>';
+    '<div class="foot"><span>W = ' + (r.profit ? 'lãi gộp' : 'doanh thu') + ' mỗi bill kỳ so sánh · TA = doanh thu thuần ÷ số bill · số liệu chưa gồm VAT</span><span>Báo cáo hiệu quả nhà hàng</span></div></div>';
   $('sheets').innerHTML = s1 + s2;
   mount($('rf'), waterfall(bridgeBars(R, 1, L), Math.abs(R.L1.m0)));
 }
@@ -1413,7 +1414,7 @@ async function exportXlsx(btn) {
     const HD = { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A3516' } } }, MF = '#,##0;[Red]-#,##0';
     const hdr = (ws, r) => ws.getRow(r).eachCell(c => { c.font = HD.font; c.fill = HD.fill; c.alignment = { wrapText: true, vertical: 'middle' }; });
     // Level 1 with live formulas
-    const w1 = wb.addWorksheet('L1 Bridge'); w1.columns = [{ width: 40 }, { width: 20 }, { width: 20 }];
+    const w1 = wb.addWorksheet('Cap 1 Cau noi'); w1.columns = [{ width: 40 }, { width: 20 }, { width: 20 }];
     w1.addRow(['Chỉ tiêu', L.p0, L.p1]); hdr(w1, 1);
     [['Số bill (TC)', A0.tc, A1.tc], ['Doanh thu thuần', A0.net, A1.net], ['Số món (không gồm bao bì, phí)', A0.items, A1.items], ['Doanh thu theo giá niêm yết (chưa VAT)', A0.listNet, A1.listNet], ['Giá vốn NVL', A0.food, A1.food], ['Hoa hồng app', A0.comm, A1.comm], ['Tính lãi gộp (1 = có)', pf, '']].forEach(r => w1.addRow(r));
     const f = (fm, v) => ({ formula: fm, result: v });
@@ -1432,7 +1433,7 @@ async function exportXlsx(btn) {
     w1.addRow(['Tổng hiệu ứng', f('SUM(B19:B24)', T.delta)]); w1.addRow(['Chênh lệch (M1 − M0)', f('C15-B15', T.delta)]); w1.addRow(['Kiểm tra (phải = 0)', f('ROUND(B25-B26,0)', 0)]);
     w1.eachRow((row, n) => { if (n > 1) row.eachCell((c, j) => { if (j > 1) c.numFmt = n >= 10 && n <= 13 ? '#,##0.00' : MF; }); });
     // Level 2 by channel with live formulas
-    const w2 = wb.addWorksheet('L2 Kenh'), H2 = ['Kênh', 'TC0', 'Net0', 'Chi phí0', 'TC1', 'Net1', 'Chi phí1', 'W', 'TCm', 'Số bill', 'Mix', 'Bill cùng kênh', 'Chi phí', 'Chênh lệch'];
+    const w2 = wb.addWorksheet('Cap 2 Kenh'), H2 = ['Kênh', 'TC0', 'Net0', 'Chi phí0', 'TC1', 'Net1', 'Chi phí1', 'W', 'TCm', 'Số bill', 'Cơ cấu', 'Bill cùng kênh', 'Chi phí', 'Chênh lệch'];
     w2.addRow(H2); hdr(w2, 1); w2.columns = H2.map((h, i) => ({ width: i ? 15 : 22 }));
     const rows = R.L2.rows, n = rows.length, last = n + 1;
     rows.forEach((x, i) => {
@@ -1451,11 +1452,11 @@ async function exportXlsx(btn) {
     // menu, scorecard, data
     const w3 = wb.addWorksheet('Menu'); w3.addRow(['Nhóm món', 'SL0', 'SL1', 'M0', 'M1', 'Sản lượng', 'Cơ cấu', 'Giá', 'Giá vốn', 'Chênh lệch']); hdr(w3, 1); w3.columns = [{ width: 24 }].concat(Array(9).fill({ width: 14 }));
     R.menu.cats.forEach(c => w3.addRow([c.cat, c.q0, c.q1, c.m0, c.m1, c.vol, c.mix, c.price, c.cost, c.delta])); w3.eachRow((row, k) => { if (k > 1) row.eachCell((c, j) => { if (j > 1) c.numFmt = MF; }); });
-    const w4 = wb.addWorksheet('Scorecard'); w4.addRow(['Chỉ số', L.p0, L.p1, 'Kế hoạch', 'Trạng thái']); hdr(w4, 1); w4.columns = [{ width: 34 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 12 }];
+    const w4 = wb.addWorksheet('Bang chi so'); w4.addRow(['Chỉ số', L.p0, L.p1, 'Kế hoạch', 'Trạng thái']); hdr(w4, 1); w4.columns = [{ width: 34 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 12 }];
     S.res.sc.forEach(x => { const row = w4.addRow([x.name, x.a, x.b, x.plan, ({ g: 'Xanh', a: 'Vàng', r: 'Đỏ' })[x.st] || '']); [2, 3, 4].forEach(j => { const c = row.getCell(j); c.numFmt = x.kind === 'pts' ? '0.0%' : Math.abs(c.value || 0) < 50 ? '0.00' : '#,##0'; }); });
-    const w5 = wb.addWorksheet('Data kenh'); w5.addRow(['Kỳ', 'Kênh', 'Bill', 'Doanh thu thuần', 'Số món', 'Doanh thu niêm yết', 'Giảm giá', 'Giá vốn', 'Hoa hồng']); hdr(w5, 1);
+    const w5 = wb.addWorksheet('Du lieu kenh'); w5.addRow(['Kỳ', 'Kênh', 'Bill', 'Doanh thu thuần', 'Số món', 'Doanh thu niêm yết', 'Giảm giá', 'Giá vốn', 'Hoa hồng']); hdr(w5, 1);
     [[L.p0, A0], [L.p1, A1]].forEach(([l, A]) => Object.keys(A.ch).forEach(k => { const c = A.ch[k]; w5.addRow([l, k, c.tc, c.net, c.items, c.listNet, c.disc, c.food, c.comm]); }));
-    const w6 = wb.addWorksheet('Data mon'); w6.addRow(['Kỳ', 'Món', 'Nhóm', 'Số lượng', 'Doanh thu thuần', 'Giá vốn']); hdr(w6, 1);
+    const w6 = wb.addWorksheet('Du lieu mon'); w6.addRow(['Kỳ', 'Món', 'Nhóm', 'Số lượng', 'Doanh thu thuần', 'Giá vốn']); hdr(w6, 1);
     [[L.p0, A0], [L.p1, A1]].forEach(([l, A]) => Object.keys(A.dishes).forEach(k => { const d = A.dishes[k]; w6.addRow([l, k, d.cat, d.q, d.n, d.food]); }));
     [w5, w6].forEach(w => { w.columns.forEach((c, i) => c.width = i < 3 ? 22 : 16); w.eachRow((row, k) => { if (k > 1) row.eachCell((c, j) => { if (typeof c.value === 'number') c.numFmt = '#,##0'; }); }); });
     wb.calcProperties.fullCalcOnLoad = true;
@@ -1557,11 +1558,12 @@ $('sheets').addEventListener('input', e => { const c = e.target.closest('[data-a
 $('sheets').addEventListener('click', e => { const b = e.target.closest('[data-arm]'); if (b) { S.cfg.actions.splice(+b.dataset.arm, 1); persist(); renderReport(); } });
 $('actAdd').onclick = () => { (S.cfg.actions = S.cfg.actions || []).push(['', '', '', '']); persist(); renderReport(); };
 $('actReset').onclick = () => { S.cfg.actions = defaultActions(); persist(); renderReport(); };
-$('copySum').onclick = async () => { const t = $('sumTxt').value; try { await navigator.clipboard.writeText(t); toast('Đã copy tóm tắt'); } catch (e) { $('sumTxt').select(); toast('Nhấn Ctrl/Cmd + C để copy'); } };
+$('copySum').onclick = async () => { const t = $('sumTxt').value; try { await navigator.clipboard.writeText(t); toast('Đã sao chép tóm tắt'); } catch (e) { $('sumTxt').select(); toast('Nhấn Ctrl/Cmd + C để sao chép'); } };
 ['xlsx', 'xlsx2'].forEach(id => $(id).onclick = function () { if (S.dirty) compute(); exportXlsx(this); });
 // PDF = the browser's print dialog ("Save as PDF"): uses the A4 print CSS and keeps text selectable
-// sheet 1 grows with the action list: shrink each sheet to one A4 landscape page (≈748px tall inside the 6mm margins)
-addEventListener('beforeprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = Math.min(0.93, 740 / s.offsetHeight)));
+// sheets grow with the action list and scorecard rows: shrink each to one A4 landscape page
+// (≈748px tall inside the 6mm margins; the first sheet starts ~14px down, so aim for 720)
+addEventListener('beforeprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = Math.min(0.93, 720 / s.offsetHeight)));
 addEventListener('afterprint', () => document.querySelectorAll('.sheet').forEach(s => s.style.zoom = ''));
 ['pdf', 'pdf2'].forEach(id => $(id).onclick = () => { if (S.page !== 3) showPage(3); if (S.res && S.res.one != null) return toast('Báo cáo PDF cần dữ liệu cả 2 kỳ'); if (S.page === 3) { toast('Chọn "Lưu dưới dạng PDF" trong hộp thoại in'); setTimeout(() => window.print(), 300); } });
 
